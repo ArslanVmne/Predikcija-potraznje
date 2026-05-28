@@ -60,8 +60,20 @@ Kljucne kolone `train.csv`:
 - `date` - datum
 - `store_nbr` - broj prodavnice (1-54)
 - `family` - porodica proizvoda (33 kategorije: PRODUCE, BEVERAGES, BREAD/BAKERY, ...)
-- `sales` - target (dnevna prodaja, moze biti 0)
-- `onpromotion` - broj stavki na promociji tog dana
+- `sales` - target (dnevna prodaja, moze biti 0; moze biti decimalan broj npr. 1.5 kg sira)
+- `onpromotion` - broj stavki u toj kategoriji koje su na promociji tog dana
+
+### Napomene o podacima (iz Kaggle opisa)
+
+**holidays_events.csv - transferred kolona je zamka:**
+- Transferovani praznik (`transferred=True`) je u stvari normalan radni dan - vlada ga premjestila na drugi datum.
+- Stvarni praznik se nalazi u redu gdje je `type='Transfer'`.
+- Primjer: Independencia de Guayaquil transferovan sa 2012-10-09 na 2012-10-12, tj. slavio se 12. oktobra.
+- `Bridge` dani su dodatni slobodni dani uz praznik (npr. produzenje vikenda). Nadoknadjuju se `Work Day` danima (subota kao radni dan).
+
+**Posebni eventi koje treba modelirati kao features:**
+- Isplata plata u javnom sektoru: svaki 15. i zadnji dan u mjesecu. Supermarketi bilježe povecanu prodaju.
+- Zemljotres magnitude 7.8 pogodio Ekvador 16. aprila 2016. Prodaja prehrambenih artikala (voda, hrana) znacajno porasla nekoliko sedmica nakon toga.
 
 ## Prioriteti za bodove
 
