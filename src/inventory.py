@@ -3,7 +3,7 @@ import math
 import numpy as np
 import pandas as pd
 
-from src.data_loader import load_inventory_params, load_val_preds
+from src.data_loader import load_current_stock, load_inventory_params, load_val_preds
 
 
 def compute_order_quantity(
@@ -37,9 +37,8 @@ def build_orders(
 ) -> list[dict]:
     params = load_inventory_params()
     val = load_val_preds()
+    stock_df = load_current_stock()
 
-    # aggregate forecast by store/family over val period
-    # ensemble_pred is already in linear space
     agg = (
         val.groupby(["store_nbr", "family"])
         .agg(forecast=("ensemble_pred", "sum"))
@@ -51,32 +50,38 @@ def build_orders(
         agg = agg[agg["store_nbr"] == store_filter]
 
     merged = params.merge(agg, on=["store_nbr", "family"], how="left")
+    merged = merged.merge(stock_df, on=["store_nbr", "family"], how="left")
     merged["forecast"] = merged["forecast"].fillna(merged["mean_daily"] * lead_time)
+    merged["current_stock"] = merged["current_stock"].fillna(merged["safety_stock"])
 
     val_period_days = int(val["date"].nunique()) if "date" in val.columns else lead_time
 
     orders = []
     for _, row in merged.iterrows():
-        # Scale ensemble forecast from val period to lead time window
         ml_forecast = float(row["forecast"]) / max(val_period_days, 1) * lead_time
+        current_stock = float(row["current_stock"])
+        rop = float(row["ROP"])
+
         info = compute_order_quantity(
             mean_daily=row["mean_daily"],
             std_daily=row["std_daily"],
             lead_time=lead_time,
             service_level=service_level,
-            current_stock=row["safety_stock"],
+            current_stock=current_stock,
             min_order=min_order,
             ml_forecast=ml_forecast,
         )
-        abc = row["ABC"]
-        if abc == "A":
-            status, status_class = "Urgent", "bgr"
-        elif abc == "B":
-            status, status_class = "Regular", "bgb"
-        else:
-            status, status_class = "Seasonal", "bgb"
 
-        # Demo unit price: cost-per-unit scaled to realistic retail range
+        abc = row["ABC"]
+        if current_stock < float(row["safety_stock"]):
+            status, status_class = "Critical", "bgr"
+        elif current_stock < rop:
+            status, status_class = "Order Now", "bgy"
+        elif abc == "A":
+            status, status_class = "Monitor", "bgb"
+        else:
+            status, status_class = "OK", "bgb"
+
         raw = row["annual_cost"] / max(row["annual_demand"], 1)
         unit_price = round(max(raw * 500, 0.50), 2)
         orders.append({
@@ -84,9 +89,11 @@ def build_orders(
             "product": row["family"],
             "store": f"Store {int(row['store_nbr'])}",
             "store_nbr": int(row["store_nbr"]),
+            "current_stock": int(current_stock),
             "ml_forecast": round(info["forecast_demand"], 0),
             "eoq": round(float(row["EOQ"]), 0),
             "safety_stock": round(info["safety_stock"], 0),
+            "rop": round(rop, 0),
             "suggested": info["order_qty"],
             "qty": info["order_qty"],
             "unit_price": round(unit_price, 2),

@@ -45,6 +45,11 @@ def load_abc() -> pd.DataFrame:
 
 
 @lru_cache(maxsize=1)
+def load_current_stock() -> pd.DataFrame:
+    return pd.read_parquet(MODELS / "current_stock.parquet")
+
+
+@lru_cache(maxsize=1)
 def load_lgbm():
     with open(MODELS / "lgbm_prophet.pkl", "rb") as f:
         pkg = pickle.load(f)

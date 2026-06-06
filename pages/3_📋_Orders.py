@@ -40,12 +40,12 @@ def get_orders(lead_time, service_level, min_order, store_num):
 
 orders = get_orders(lead_time, service_level, min_order, store_num)
 df_full = pd.DataFrame(orders)[
-    ["product", "store", "abc", "ml_forecast", "eoq", "safety_stock",
-     "suggested", "qty", "unit_price", "total", "status"]
+    ["product", "store", "abc", "current_stock", "safety_stock", "rop",
+     "ml_forecast", "suggested", "qty", "unit_price", "total", "status"]
 ]
 df_full.columns = [
-    "Product", "Store", "ABC", "ML Forecast (units)", "EOQ", "Safety Stock",
-    "System Suggested", "My Qty", "Unit Price ($)", "Total ($)", "Status"
+    "Product", "Store", "ABC", "Current Stock", "Safety Stock", "ROP",
+    "Forecasted Demand", "Order Qty", "My Qty", "Unit Price ($)", "Total ($)", "Status"
 ]
 
 today = date.today()
@@ -96,9 +96,12 @@ st.markdown(f"""
 
 # ── KPI strip ─────────────────────────────────────────────────────────────────
 k1, k2, k3, k4 = st.columns(4)
-k1.metric("Total Orders", len(df_full))
+critical_count = int((df_full["Status"] == "Critical").sum())
+order_now_count = int((df_full["Status"] == "Order Now").sum())
+k1.metric("Total Lines", len(df_full))
 k2.metric("Total Value", f"${total_value:,.0f}")
-k3.metric("Urgent (A-class)", urgent_count)
+k3.metric("Critical (below safety stock)", critical_count,
+          delta="Immediate action" if critical_count else None, delta_color="inverse")
 k4.metric("Delivery Date", delivery_date.strftime("%b %d"))
 
 st.divider()
@@ -108,8 +111,8 @@ st.markdown("#### Order Lines")
 st.caption("Edit **My Qty** to adjust. A-class items are priority — reorder before stock drops below safety stock.")
 
 # Show only the columns relevant to the order form (no internal columns)
-df_view = df_full[["Product", "Store", "ABC", "ML Forecast (units)",
-                    "Safety Stock", "System Suggested", "My Qty",
+df_view = df_full[["Product", "Store", "ABC", "Current Stock", "Safety Stock", "ROP",
+                    "Forecasted Demand", "Order Qty", "My Qty",
                     "Unit Price ($)", "Total ($)", "Status"]].copy()
 
 edited_df = st.data_editor(
@@ -117,21 +120,26 @@ edited_df = st.data_editor(
     use_container_width=True,
     hide_index=True,
     column_config={
-        "Product":               st.column_config.TextColumn(width="medium"),
-        "Store":                 st.column_config.TextColumn(width="small"),
-        "ABC":                   st.column_config.TextColumn(width="small"),
-        "ML Forecast (units)":   st.column_config.NumberColumn(width="small",
-                                     help="Ensemble model forecast scaled to lead time window"),
-        "Safety Stock":          st.column_config.NumberColumn(width="small",
-                                     help=f"Z × σ × √lead_time  (Z at {int(service_level*100)}% SL)"),
-        "System Suggested":      st.column_config.NumberColumn(width="small"),
-        "My Qty":                st.column_config.NumberColumn(width="small", min_value=0),
-        "Unit Price ($)":        st.column_config.NumberColumn(format="$%.2f", width="small"),
-        "Total ($)":             st.column_config.NumberColumn(format="$%.2f", width="small"),
-        "Status":                st.column_config.TextColumn(width="small"),
+        "Product":           st.column_config.TextColumn(width="medium"),
+        "Store":             st.column_config.TextColumn(width="small"),
+        "ABC":               st.column_config.TextColumn(width="small"),
+        "Current Stock":     st.column_config.NumberColumn(width="small",
+                                 help="Current on-hand inventory (demo data)"),
+        "Safety Stock":      st.column_config.NumberColumn(width="small",
+                                 help=f"Minimum buffer = Z × σ × √lead_time at {int(service_level*100)}% SL"),
+        "ROP":               st.column_config.NumberColumn(width="small",
+                                 help="Reorder Point — order when stock falls below this"),
+        "Forecasted Demand": st.column_config.NumberColumn(width="small",
+                                 help="Ensemble model prediction for the lead time window"),
+        "Order Qty":         st.column_config.NumberColumn(width="small",
+                                 help="Forecasted Demand + Safety Stock − Current Stock"),
+        "My Qty":            st.column_config.NumberColumn(width="small", min_value=0),
+        "Unit Price ($)":    st.column_config.NumberColumn(format="$%.2f", width="small"),
+        "Total ($)":         st.column_config.NumberColumn(format="$%.2f", width="small"),
+        "Status":            st.column_config.TextColumn(width="small"),
     },
-    disabled=["Product", "Store", "ABC", "ML Forecast (units)",
-              "Safety Stock", "System Suggested", "Unit Price ($)", "Total ($)", "Status"],
+    disabled=["Product", "Store", "ABC", "Current Stock", "Safety Stock", "ROP",
+              "Forecasted Demand", "Order Qty", "Unit Price ($)", "Total ($)", "Status"],
 )
 
 # Recalculate totals on qty edit
@@ -140,8 +148,9 @@ if "My Qty" in edited_df.columns:
 
 # ── Order summary footer ───────────────────────────────────────────────────────
 adj_total = edited_df["Total ($)"].sum()
-adj_urgent = int((edited_df["ABC"] == "A").sum())
-ml_total = int(edited_df["ML Forecast (units)"].sum())
+ml_total = int(edited_df["Forecasted Demand"].sum())
+adj_critical = int((edited_df["Status"] == "Critical").sum())
+adj_order_now = int((edited_df["Status"] == "Order Now").sum())
 
 st.markdown(f"""
 <div style="
@@ -155,9 +164,9 @@ st.markdown(f"""
     align-items: center;
 ">
     <div style="color:#94a3b8; font-size:0.85rem; line-height:2;">
-        <div>ML Forecast total &nbsp;<span style="color:#e2e8f0;">{ml_total:,} units</span></div>
-        <div>Urgent lines (A-class) &nbsp;<span style="color:#ef4444; font-weight:600;">{adj_urgent}</span></div>
-        <div>Min order qty &nbsp;<span style="color:#e2e8f0;">{min_order} units</span></div>
+        <div>Forecasted demand &nbsp;<span style="color:#e2e8f0;">{ml_total:,} units</span></div>
+        <div>Critical lines &nbsp;<span style="color:#ef4444; font-weight:600;">{adj_critical} (below safety stock)</span></div>
+        <div>Order now &nbsp;<span style="color:#f59e0b; font-weight:600;">{adj_order_now} (below ROP)</span></div>
     </div>
     <div style="text-align:right;">
         <div style="color:#64748b; font-size:0.8rem;">ORDER TOTAL</div>
