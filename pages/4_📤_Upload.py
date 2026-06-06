@@ -1,7 +1,8 @@
 import io
-import time
 
 import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
 import streamlit as st
 
 st.set_page_config(page_title="Upload — ForecastIQ", page_icon="📤", layout="wide")
@@ -15,6 +16,12 @@ COL_ALIASES = {
     "quantity": "sales", "kolicina_prodano": "sales",
     "promo": "onpromotion", "promocija": "onpromotion",
 }
+
+CHART_LAYOUT = dict(
+    plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+    font=dict(color="#e2e8f0", size=12),
+    margin=dict(t=20, r=20, b=40, l=60),
+)
 
 
 def detect_mapping(columns: list[str]) -> dict[str, str]:
@@ -31,23 +38,30 @@ def detect_mapping(columns: list[str]) -> dict[str, str]:
     return mapping
 
 
-# ── Page ──────────────────────────────────────────────────────────────────────
-st.title("Data Upload")
-st.caption("Upload a new sales dataset to update forecasts. Supports Kaggle Favorita train.csv format.")
+def read_uploaded(file) -> pd.DataFrame:
+    if file.name.endswith(".csv"):
+        return pd.read_csv(file, nrows=50_000)
+    return pd.read_excel(file, nrows=50_000)
 
-# Step tracker
+
+# ── Session state init ────────────────────────────────────────────────────────
 if "upload_step" not in st.session_state:
     st.session_state.upload_step = 1
-if "upload_session" not in st.session_state:
-    st.session_state.upload_session = {}
+if "upload_df" not in st.session_state:
+    st.session_state.upload_df = None
+if "upload_meta" not in st.session_state:
+    st.session_state.upload_meta = {}
 
 step = st.session_state.upload_step
-session = st.session_state.upload_session
+
+# ── Header ────────────────────────────────────────────────────────────────────
+st.title("Data Upload")
+st.caption("Upload a sales dataset to explore its structure and validate it for forecasting.")
 
 # Step indicators
-steps = ["1 · Upload", "2 · Mapping", "3 · Validation", "4 · Confirm"]
+step_labels = ["1 · Upload", "2 · Mapping", "3 · Explore", "4 · Done"]
 cols = st.columns(4)
-for i, label in enumerate(steps):
+for i, label in enumerate(step_labels):
     with cols[i]:
         if i + 1 < step:
             st.success(f"✓ {label}")
@@ -58,29 +72,27 @@ for i, label in enumerate(steps):
 
 st.divider()
 
-# ── Step 1: Upload ─────────────────────────────────────────────────────────────
+# ── Step 1 — Upload ───────────────────────────────────────────────────────────
 if step == 1:
-    st.subheader("Upload File")
+    st.subheader("Upload a file or download sample data")
 
-    col_up, col_demo = st.columns([2, 1])
+    col_up, col_demo = st.columns([3, 2])
 
     with col_up:
-        uploaded = st.file_uploader("Drag & drop train.csv here or click to browse",
-                                    type=["csv", "xlsx", "xls"])
+        uploaded = st.file_uploader(
+            "Drag & drop your CSV here",
+            type=["csv", "xlsx", "xls"],
+            help="Expected columns: date, store_nbr, family, sales, onpromotion",
+        )
         if uploaded:
             with st.spinner("Reading file..."):
                 try:
-                    if uploaded.name.endswith(".csv"):
-                        df = pd.read_csv(uploaded, nrows=5000)
-                    else:
-                        df = pd.read_excel(uploaded, nrows=5000)
+                    df = read_uploaded(uploaded)
                     mapping = detect_mapping(df.columns.tolist())
-                    st.session_state.upload_session = {
+                    st.session_state.upload_df = df
+                    st.session_state.upload_meta = {
                         "filename": uploaded.name,
-                        "rows": len(df),
-                        "columns": df.columns.tolist(),
                         "mapping": mapping,
-                        "preview": df.head(5),
                     }
                     st.session_state.upload_step = 2
                     st.rerun()
@@ -88,116 +100,230 @@ if step == 1:
                     st.error(f"Could not read file: {e}")
 
     with col_demo:
-        st.markdown("**Or use demo data**")
-        if st.button("Use Favorita demo dataset", use_container_width=True):
-            st.session_state.upload_session = {
-                "filename": "train.csv (demo)",
-                "rows": 3_000_888,
-                "columns": ["date", "store_nbr", "family", "sales", "onpromotion"],
-                "mapping": {"date": "date", "store_nbr": "store_nbr",
-                            "family": "family", "sales": "sales", "onpromotion": "onpromotion"},
-                "preview": None,
-                "is_demo": True,
-            }
-            st.session_state.upload_step = 2
-            st.rerun()
+        st.markdown("**Don't have a file? Download sample data:**")
 
-# ── Step 2: Mapping ────────────────────────────────────────────────────────────
+        with open("data/demo_sales.csv", "rb") as f:
+            st.download_button(
+                "⬇ demo_sales.csv",
+                data=f.read(),
+                file_name="demo_sales.csv",
+                mime="text/csv",
+                use_container_width=True,
+                help="Jan–Jul 2017 · Stores 1, 3, 5 · 33 families · 20,988 rows",
+            )
+
+        with open("data/demo_external_factors.csv", "rb") as f:
+            st.download_button(
+                "⬇ demo_external_factors.csv",
+                data=f.read(),
+                file_name="demo_external_factors.csv",
+                mime="text/csv",
+                use_container_width=True,
+                help="Oil price, holidays, transactions · 212 rows",
+            )
+
+        st.caption("Download → inspect → re-upload to see the full pipeline.")
+
+# ── Step 2 — Column Mapping ───────────────────────────────────────────────────
 elif step == 2:
-    st.subheader("Column Mapping")
-    st.success(f"✓ **{session['filename']}** — {session['rows']:,} rows")
-
-    mapping = session.get("mapping", {})
+    meta = st.session_state.upload_meta
+    df = st.session_state.upload_df
+    mapping = meta.get("mapping", {})
     mapped_targets = set(mapping.values())
     missing = REQUIRED_COLS - mapped_targets
 
-    if mapping:
-        map_df = pd.DataFrame(list(mapping.items()), columns=["Your column", "→ System column"])
-        st.dataframe(map_df, use_container_width=True, hide_index=True)
-    if missing:
-        st.warning(f"Could not auto-map: **{', '.join(missing)}**. Kaggle train.csv format is recommended.")
-    else:
-        st.success("All required columns mapped automatically.")
+    st.subheader("Column Mapping")
+    st.success(f"✓ **{meta['filename']}** — {len(df):,} rows, {len(df.columns)} columns")
 
-    if session.get("preview") is not None:
-        with st.expander("Preview (first 5 rows)"):
-            st.dataframe(session["preview"], use_container_width=True, hide_index=True)
+    col_map, col_prev = st.columns([1, 1])
 
-    c1, c2 = st.columns([1, 6])
+    with col_map:
+        if mapping:
+            map_df = pd.DataFrame(
+                [(k, "→", v) for k, v in mapping.items()],
+                columns=["Your column", "", "System column"],
+            )
+            st.dataframe(map_df, use_container_width=True, hide_index=True)
+
+        if missing:
+            st.warning(f"Could not auto-map: **{', '.join(missing)}**")
+            for col in missing:
+                choice = st.selectbox(
+                    f"Map '{col}' to:",
+                    ["(skip)"] + df.columns.tolist(),
+                    key=f"manual_{col}",
+                )
+                if choice != "(skip)":
+                    mapping[choice] = col
+        else:
+            st.success("All required columns mapped automatically.")
+
+    with col_prev:
+        st.markdown("**Preview (5 rows)**")
+        st.dataframe(df.head(5), use_container_width=True, hide_index=True)
+
+    st.session_state.upload_meta["mapping"] = mapping
+    mapped_targets = set(mapping.values())
+    missing = REQUIRED_COLS - mapped_targets
+
+    c1, c2 = st.columns([1, 5])
     with c1:
         if st.button("← Back"):
             st.session_state.upload_step = 1
             st.rerun()
     with c2:
-        if st.button("Continue to Validation →", type="primary"):
+        if st.button("Continue →", type="primary", disabled=bool(missing)):
             st.session_state.upload_step = 3
             st.rerun()
 
-# ── Step 3: Validation ─────────────────────────────────────────────────────────
+# ── Step 3 — Explore ──────────────────────────────────────────────────────────
 elif step == 3:
-    st.subheader("Validation")
+    meta = st.session_state.upload_meta
+    raw_df = st.session_state.upload_df
+    mapping = meta["mapping"]
 
-    mapping = session.get("mapping", {})
-    mapped_targets = set(mapping.values())
-    missing = REQUIRED_COLS - mapped_targets
-    valid = len(missing) == 0
+    # Apply column mapping and parse
+    df = raw_df.rename(columns=mapping).copy()
+    df["date"] = pd.to_datetime(df["date"], errors="coerce")
+    df["sales"] = pd.to_numeric(df["sales"], errors="coerce").fillna(0)
+    df["store_nbr"] = pd.to_numeric(df["store_nbr"], errors="coerce")
+    df = df.dropna(subset=["date", "store_nbr", "family"])
 
-    if valid:
-        st.success("**Validation passed** — all required columns found.")
+    date_min = df["date"].min().strftime("%b %d, %Y")
+    date_max = df["date"].max().strftime("%b %d, %Y")
+    n_stores = df["store_nbr"].nunique()
+    n_families = df["family"].nunique()
+    n_rows = len(df)
+    total_sales = df["sales"].sum()
+    missing_pct = round(raw_df.isnull().mean().mean() * 100, 1)
+
+    st.subheader("Data Explorer")
+
+    # KPIs
+    k1, k2, k3, k4, k5 = st.columns(5)
+    k1.metric("Rows", f"{n_rows:,}")
+    k2.metric("Stores", n_stores)
+    k3.metric("Families", n_families)
+    k4.metric("Date range", f"{date_min} – {date_max}")
+    k5.metric("Missing values", f"{missing_pct}%",
+              delta="Clean" if missing_pct < 2 else "Check data",
+              delta_color="off" if missing_pct < 2 else "inverse")
+
+    st.divider()
+
+    col_left, col_right = st.columns(2)
+
+    # Sales trend
+    with col_left:
+        st.markdown("**Daily sales trend**")
+        daily = df.groupby("date")["sales"].sum().reset_index()
+        fig = go.Figure(go.Scatter(
+            x=daily["date"], y=daily["sales"],
+            mode="lines", line=dict(color="#2563eb", width=2),
+            fill="tozeroy", fillcolor="rgba(37,99,235,0.1)",
+        ))
+        fig.update_layout(height=220, **CHART_LAYOUT,
+                          xaxis=dict(showgrid=False),
+                          yaxis=dict(gridcolor="#334155"))
+        st.plotly_chart(fig, use_container_width=True)
+
+    # Top families
+    with col_right:
+        st.markdown("**Top families by total sales**")
+        top = (df.groupby("family")["sales"].sum()
+                 .sort_values(ascending=True).tail(10).reset_index())
+        fig2 = go.Figure(go.Bar(
+            x=top["sales"], y=top["family"],
+            orientation="h", marker_color="#2563eb",
+        ))
+        fig2.update_layout(height=220, **CHART_LAYOUT,
+                           xaxis=dict(title="Total units", gridcolor="#334155"),
+                           yaxis=dict(showgrid=False))
+        st.plotly_chart(fig2, use_container_width=True)
+
+    # Store breakdown
+    st.markdown("**Sales by store**")
+    store_df = df.groupby("store_nbr")["sales"].sum().reset_index().sort_values("sales", ascending=False)
+    fig3 = px.bar(store_df, x="store_nbr", y="sales",
+                  labels={"store_nbr": "Store", "sales": "Total sales"},
+                  color_discrete_sequence=["#2563eb"])
+    fig3.update_layout(height=200, **CHART_LAYOUT,
+                       xaxis=dict(showgrid=False, tickmode="linear"),
+                       yaxis=dict(gridcolor="#334155"))
+    st.plotly_chart(fig3, use_container_width=True)
+
+    # Validation summary
+    issues = []
+    if missing_pct > 5:
+        issues.append(f"High missing value rate: {missing_pct}%")
+    if df["sales"].min() < 0:
+        issues.append("Negative sales values detected")
+    if n_families < 3:
+        issues.append("Very few product families — check family column")
+
+    if issues:
+        st.warning("**Validation warnings:**\n" + "\n".join(f"- {i}" for i in issues))
     else:
-        st.error(f"**Issues found:** missing columns — {', '.join(missing)}")
+        st.success("**Validation passed** — data looks clean and complete.")
 
-    col_stats = st.columns(3)
-    col_stats[0].metric("Rows", f"{session['rows']:,}")
-    col_stats[1].metric("Mapped columns", len(mapping))
-    col_stats[2].metric("Period", "2013–2017")
-
-    c1, c2 = st.columns([1, 6])
+    c1, c2 = st.columns([1, 5])
     with c1:
         if st.button("← Back"):
             st.session_state.upload_step = 2
             st.rerun()
     with c2:
-        if st.button("Continue →", type="primary", disabled=not valid):
+        if st.button("✓ Confirm & continue", type="primary"):
             st.session_state.upload_step = 4
             st.rerun()
 
-# ── Step 4: Confirm / Process ──────────────────────────────────────────────────
+# ── Step 4 — Done ─────────────────────────────────────────────────────────────
 elif step == 4:
-    st.subheader("Confirm Import")
+    meta = st.session_state.upload_meta
+    df = st.session_state.upload_df
+    mapping = meta["mapping"]
 
-    col_info, _ = st.columns([1, 1])
-    with col_info:
-        st.markdown(f"**File:** {session['filename']}")
-        st.markdown(f"**Rows:** {session['rows']:,}")
-        st.markdown(f"**Mapped columns:** {len(session.get('mapping', {}))}")
+    df_mapped = df.rename(columns=mapping).copy()
+    df_mapped["date"] = pd.to_datetime(df_mapped["date"], errors="coerce")
 
-    if "upload_done" not in st.session_state:
-        st.session_state.upload_done = False
+    st.success(f"**{meta['filename']}** validated and ready.")
 
-    if not st.session_state.upload_done:
-        c1, c2 = st.columns([1, 6])
-        with c1:
-            if st.button("← Back"):
-                st.session_state.upload_step = 3
-                st.rerun()
-        with c2:
-            if st.button("✓ Load into system", type="primary"):
-                progress_bar = st.progress(0, text="Feature engineering in progress...")
-                for p in range(0, 101, 10):
-                    time.sleep(0.4)
-                    progress_bar.progress(p, text=f"Processing... {p}%")
-                st.session_state.upload_done = True
-                st.rerun()
-    else:
-        st.success("**Data loaded successfully!** Head to the Forecast page to explore results.")
-        col_a, col_b = st.columns(2)
-        with col_a:
-            if st.button("Go to Forecast →", type="primary"):
-                st.switch_page("pages/1_📊_Forecast.py")
-        with col_b:
-            if st.button("Upload another file"):
-                st.session_state.upload_step = 1
-                st.session_state.upload_session = {}
-                st.session_state.upload_done = False
-                st.rerun()
+    col_a, col_b = st.columns(2)
+    with col_a:
+        st.markdown("#### Summary")
+        st.markdown(f"""
+| | |
+|---|---|
+| Rows loaded | {len(df_mapped):,} |
+| Stores | {df_mapped['store_nbr'].nunique()} |
+| Families | {df_mapped['family'].nunique()} |
+| From | {df_mapped['date'].min().strftime('%B %d, %Y')} |
+| To | {df_mapped['date'].max().strftime('%B %d, %Y')} |
+""")
+
+    with col_b:
+        st.markdown("#### What happens next")
+        st.info("""
+In a production deployment, ForecastIQ would:
+1. Run feature engineering (lags, rolling stats, Prophet components)
+2. Re-train or fine-tune the LightGBM + LSTM ensemble
+3. Recompute inventory parameters (EOQ, safety stock, ABC-XYZ)
+
+For this demo the pre-trained Favorita model is used.
+The Forecast and Orders pages reflect results on the **2017 validation period**.
+""")
+
+    st.divider()
+
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        if st.button("Go to Forecast →", type="primary", use_container_width=True):
+            st.switch_page("pages/1_📊_Forecast.py")
+    with c2:
+        if st.button("Go to Orders →", use_container_width=True):
+            st.switch_page("pages/3_📋_Orders.py")
+    with c3:
+        if st.button("Upload another file", use_container_width=True):
+            st.session_state.upload_step = 1
+            st.session_state.upload_df = None
+            st.session_state.upload_meta = {}
+            st.rerun()
