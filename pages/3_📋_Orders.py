@@ -1,4 +1,5 @@
 import io
+from datetime import date
 
 import pandas as pd
 import streamlit as st
@@ -40,14 +41,15 @@ def get_orders(lead_time, service_level, min_order, store_filter):
 
 
 orders = get_orders(lead_time, service_level, min_order, store_num)
-df = pd.DataFrame(orders)[["product", "store", "abc", "suggested", "qty", "unit_price", "total", "status"]]
-df.columns = ["Product", "Store", "ABC", "System Suggested", "My Qty", "Unit Price ($)", "Total ($)", "Status"]
+df = pd.DataFrame(orders)[["product", "store", "abc", "ml_forecast", "suggested", "qty", "unit_price", "total", "status"]]
+df.columns = ["Product", "Store", "ABC", "ML Forecast (units)", "System Suggested", "My Qty", "Unit Price ($)", "Total ($)", "Status"]
 
 total_value = df["Total ($)"].sum()
+today = date.today().strftime("%b %d, %Y")
 
 # ── Header ────────────────────────────────────────────────────────────────────
 st.title("Purchase Orders")
-st.caption(f"Week of Jun 2, 2026  ·  Generated: {len(df)} orders  ·  Total: ${total_value:,.2f}")
+st.caption(f"Generated: {today}  ·  {len(df)} orders  ·  Total: ${total_value:,.2f}")
 
 # ── Summary KPIs ──────────────────────────────────────────────────────────────
 k1, k2, k3 = st.columns(3)
@@ -69,13 +71,14 @@ edited_df = st.data_editor(
         "Product": st.column_config.TextColumn(width="medium"),
         "Store": st.column_config.TextColumn(width="small"),
         "ABC": st.column_config.TextColumn(width="small"),
+        "ML Forecast (units)": st.column_config.NumberColumn(width="small", help="Ensemble model forecast for the lead time window"),
         "System Suggested": st.column_config.NumberColumn(width="small"),
         "My Qty": st.column_config.NumberColumn(width="small", min_value=0),
         "Unit Price ($)": st.column_config.NumberColumn(format="$%.2f", width="small"),
         "Total ($)": st.column_config.NumberColumn(format="$%.2f", width="small"),
         "Status": st.column_config.TextColumn(width="small"),
     },
-    disabled=["Product", "Store", "ABC", "System Suggested", "Unit Price ($)", "Total ($)", "Status"],
+    disabled=["Product", "Store", "ABC", "ML Forecast (units)", "System Suggested", "Unit Price ($)", "Total ($)", "Status"],
 )
 
 # Recalculate totals based on edited qty
