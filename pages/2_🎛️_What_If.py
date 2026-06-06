@@ -43,39 +43,51 @@ def make_whatif_chart(baseline, scenario) -> go.Figure:
     return fig
 
 
-# ── Controls ──────────────────────────────────────────────────────────────────
+# ── Controls (inside a form so sliders don't trigger reruns) ──────────────────
 families = cached_families()
 stores = cached_stores()
 
 col_ctrl, col_main = st.columns([1, 2.5])
 
 with col_ctrl:
-    st.subheader("Parameters")
+    with st.form("whatif_form"):
+        st.subheader("Parameters")
 
-    family = st.selectbox("Product family", families, index=families.index("PRODUCE") if "PRODUCE" in families else 0)
-    store = st.selectbox("Store", stores, index=0)
+        family = st.selectbox("Product family", families,
+                              index=families.index("PRODUCE") if "PRODUCE" in families else 0)
+        store = st.selectbox("Store", stores, index=0)
 
-    st.markdown("**Marketing campaign**")
-    budget = st.slider("Budget ($)", 0, 10_000, 6_000, step=500)
-    duration = st.slider("Duration (days)", 1, 30, 14)
+        st.markdown("**Marketing campaign**")
+        budget = st.slider("Budget ($)", 0, 10_000, 6_000, step=500)
+        duration = st.slider("Duration (days)", 1, 30, 14)
 
-    st.markdown("**Promo discount**")
-    discount = st.slider("Discount (%)", 0, 50, 15, step=5)
+        st.markdown("**Promo discount**")
+        discount = st.slider("Discount (%)", 0, 50, 15, step=5)
 
-    st.markdown("**External factors**")
-    holiday = st.toggle("National holiday", value=False)
-    oil = st.slider("Oil price ($/barrel)", 30, 100, 49)
+        st.markdown("**External factors**")
+        holiday = st.toggle("National holiday", value=False)
+        oil = st.slider("Oil price ($/barrel)", 30, 100, 49)
 
-    run = st.button("▶ Run Simulation", type="primary", use_container_width=True)
+        run = st.form_submit_button("▶ Run Simulation", type="primary", use_container_width=True)
 
 # ── Simulation ────────────────────────────────────────────────────────────────
 with col_main:
     st.title("What-If Simulator")
-    st.caption(f"{family}  ·  Store {store}")
 
-    if run or "whatif_result" not in st.session_state \
-            or st.session_state.get("whatif_key") != (store, family, discount, oil, holiday):
+    # Auto-run on first load with defaults
+    if "whatif_result" not in st.session_state:
+        defaults = (
+            families.index("PRODUCE") if "PRODUCE" in families else 0,
+            stores[0],
+        )
+        default_family = families[defaults[0]]
+        default_store = defaults[1]
+        baseline_df = lgbm_predict_what_if(default_store, default_family)
+        scenario_df = baseline_df.copy()
+        st.session_state["whatif_result"] = (baseline_df, scenario_df)
+        st.session_state["whatif_params"] = (6_000, 14, 0)
 
+    if run:
         with st.spinner("Running LGBM inference..."):
             baseline_df = lgbm_predict_what_if(store, family)
             scenario_df = lgbm_predict_what_if(
@@ -84,13 +96,13 @@ with col_main:
                 oil_override=float(oil),
                 holiday_override=holiday if holiday else None,
             )
-
         st.session_state["whatif_result"] = (baseline_df, scenario_df)
-        st.session_state["whatif_key"] = (store, family, discount, oil, holiday)
         st.session_state["whatif_params"] = (budget, duration, discount)
 
     baseline_df, scenario_df = st.session_state["whatif_result"]
-    budget_s, duration_s, discount_s = st.session_state.get("whatif_params", (budget, duration, discount))
+    budget_s, duration_s, discount_s = st.session_state["whatif_params"]
+
+    st.caption(f"{family}  ·  Store {store}" if run else "Adjust parameters and click **▶ Run Simulation**")
 
     avg_price = 2.0
     baseline_sales = float(baseline_df["sales"].sum())
@@ -127,6 +139,3 @@ with col_main:
     with i2:
         st.metric("Campaign cost", f"${budget_s:,}")
         st.metric("ROI", f"{roi}×")
-
-    if not run:
-        st.info("Adjust parameters and click **▶ Run Simulation** to update results.")
