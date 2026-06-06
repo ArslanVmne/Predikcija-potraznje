@@ -51,6 +51,9 @@ c2.page_link("pages/2_🎛️_What_If.py", label="What-If Simulator", icon="🎛
 c3.page_link("pages/3_📋_Orders.py", label="Purchase Orders", icon="📋")
 c4.page_link("pages/4_📤_Upload.py", label="Upload Data", icon="📤")
 
+_, c5, _ = st.columns([2, 1, 2])
+c5.page_link("pages/5_🔲_ABC_XYZ.py", label="ABC-XYZ Matrix", icon="🔲")
+
 st.divider()
 
 st.markdown("### Dataset")
