@@ -55,7 +55,7 @@ st.divider()
 
 st.markdown("### Dataset")
 st.markdown("""
-[Corporación Favorita Grocery Sales Forecasting](https://www.kaggle.com/competitions/favorita-grocery-sales-forecasting) — Kaggle competition dataset.
+[Store Sales — Time Series Forecasting](https://www.kaggle.com/competitions/store-sales-time-series-forecasting) — Kaggle competition dataset.
 3M+ daily sales records across 54 Ecuadorian grocery stores and 33 product categories (2013–2017).
 External factors included: oil prices, holidays, promotions, transactions.
 """)
