@@ -1,5 +1,5 @@
 import io
-from datetime import date
+from datetime import date, timedelta
 
 import pandas as pd
 import streamlit as st
@@ -17,7 +17,7 @@ def cached_stores():
     return get_stores()
 
 
-# ── Controls ──────────────────────────────────────────────────────────────────
+# ── Sidebar controls ──────────────────────────────────────────────────────────
 with st.sidebar:
     st.divider()
     st.markdown("**Order parameters**")
@@ -26,85 +26,167 @@ with st.sidebar:
                                  index=1, format_func=lambda x: f"{int(x*100)}%")
     min_order = st.number_input("Min order qty", min_value=0, value=50, step=10)
     stores = cached_stores()
-    store_filter = st.selectbox("Filter by store", ["All"] + [f"Store {s}" for s in stores])
+    store_filter = st.selectbox("Store", ["All"] + [f"Store {s}" for s in stores])
 
 store_num = None if store_filter == "All" else int(store_filter.split()[-1])
 
+
 # ── Load orders ───────────────────────────────────────────────────────────────
 @st.cache_data
-def get_orders(lead_time, service_level, min_order, store_filter):
-    return build_orders(
-        lead_time=lead_time,
-        service_level=service_level,
-        min_order=min_order,
-        store_filter=store_filter,
-    )
+def get_orders(lead_time, service_level, min_order, store_num):
+    return build_orders(lead_time=lead_time, service_level=service_level,
+                        min_order=min_order, store_filter=store_num)
 
 
 orders = get_orders(lead_time, service_level, min_order, store_num)
-df = pd.DataFrame(orders)[["product", "store", "abc", "ml_forecast", "eoq", "safety_stock", "suggested", "qty", "unit_price", "total", "status"]]
-df.columns = ["Product", "Store", "ABC", "ML Forecast (units)", "EOQ", "Safety Stock", "System Suggested", "My Qty", "Unit Price ($)", "Total ($)", "Status"]
+df_full = pd.DataFrame(orders)[
+    ["product", "store", "abc", "ml_forecast", "eoq", "safety_stock",
+     "suggested", "qty", "unit_price", "total", "status"]
+]
+df_full.columns = [
+    "Product", "Store", "ABC", "ML Forecast (units)", "EOQ", "Safety Stock",
+    "System Suggested", "My Qty", "Unit Price ($)", "Total ($)", "Status"
+]
 
-total_value = df["Total ($)"].sum()
-today = date.today().strftime("%b %d, %Y")
+today = date.today()
+po_number = f"PO-{today.strftime('%Y%m%d')}-{abs(hash(store_filter)) % 1000:03d}"
+delivery_date = today + timedelta(days=lead_time)
+total_value = df_full["Total ($)"].sum()
+urgent_count = int((df_full["ABC"] == "A").sum())
+store_label = store_filter if store_filter != "All" else "All Stores"
 
-# ── Header ────────────────────────────────────────────────────────────────────
-st.title("Purchase Orders")
-st.caption(f"Generated: {today}  ·  {len(df)} orders  ·  Total: ${total_value:,.2f}")
+# ── PO Header ─────────────────────────────────────────────────────────────────
+st.markdown(f"""
+<div style="
+    border: 1px solid #334155;
+    border-radius: 10px;
+    padding: 24px 28px 16px 28px;
+    margin-bottom: 8px;
+    background: #0f172a;
+">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+        <div>
+            <div style="font-size:1.6rem; font-weight:700; color:#e2e8f0; letter-spacing:1px;">
+                PURCHASE ORDER
+            </div>
+            <div style="color:#94a3b8; font-size:0.9rem; margin-top:4px;">
+                ForecastIQ — Supply Chain Intelligence
+            </div>
+            <div style="color:#64748b; font-size:0.82rem; margin-top:10px;">
+                Corporación Favorita · Ecuador
+            </div>
+        </div>
+        <div style="text-align:right; font-size:0.85rem; color:#94a3b8; line-height:2;">
+            <div><span style="color:#64748b;">PO Number</span>&nbsp;&nbsp;
+                 <span style="color:#e2e8f0; font-weight:600;">{po_number}</span></div>
+            <div><span style="color:#64748b;">Date</span>&nbsp;&nbsp;
+                 <span style="color:#e2e8f0;">{today.strftime("%B %d, %Y")}</span></div>
+            <div><span style="color:#64748b;">Delivery by</span>&nbsp;&nbsp;
+                 <span style="color:#e2e8f0;">{delivery_date.strftime("%B %d, %Y")}</span></div>
+            <div><span style="color:#64748b;">Lead time</span>&nbsp;&nbsp;
+                 <span style="color:#e2e8f0;">{lead_time} days</span></div>
+            <div><span style="color:#64748b;">Service level</span>&nbsp;&nbsp;
+                 <span style="color:#e2e8f0;">{int(service_level*100)}%</span></div>
+            <div><span style="color:#64748b;">Store</span>&nbsp;&nbsp;
+                 <span style="color:#e2e8f0;">{store_label}</span></div>
+        </div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
-# ── Summary KPIs ──────────────────────────────────────────────────────────────
-k1, k2, k3 = st.columns(3)
-k1.metric("Total Orders", len(df))
+# ── KPI strip ─────────────────────────────────────────────────────────────────
+k1, k2, k3, k4 = st.columns(4)
+k1.metric("Total Orders", len(df_full))
 k2.metric("Total Value", f"${total_value:,.0f}")
-k3.metric("Urgent (A-class)", int((df["ABC"] == "A").sum()))
+k3.metric("Urgent (A-class)", urgent_count)
+k4.metric("Delivery Date", delivery_date.strftime("%b %d"))
 
 st.divider()
 
-# ── Editable table ────────────────────────────────────────────────────────────
-st.subheader("Order Review")
-st.caption("Edit **My Qty** column to adjust quantities. A-class items are highlighted in red — reorder priority.")
+# ── Order line items ───────────────────────────────────────────────────────────
+st.markdown("#### Order Lines")
+st.caption("Edit **My Qty** to adjust. A-class items are priority — reorder before stock drops below safety stock.")
+
+# Show only the columns relevant to the order form (no internal columns)
+df_view = df_full[["Product", "Store", "ABC", "ML Forecast (units)",
+                    "Safety Stock", "System Suggested", "My Qty",
+                    "Unit Price ($)", "Total ($)", "Status"]].copy()
 
 edited_df = st.data_editor(
-    df,
+    df_view,
     use_container_width=True,
     hide_index=True,
     column_config={
-        "Product": st.column_config.TextColumn(width="medium"),
-        "Store": st.column_config.TextColumn(width="small"),
-        "ABC": st.column_config.TextColumn(width="small"),
-        "ML Forecast (units)": st.column_config.NumberColumn(width="small", help="Ensemble model forecast for the lead time window"),
-        "EOQ": st.column_config.NumberColumn(width="small", help="Economic Order Quantity — optimal batch size minimising ordering + holding costs"),
-        "Safety Stock": st.column_config.NumberColumn(width="small", help=f"Buffer stock = Z × σ × √lead_time  (Z={service_level:.0%} service level)"),
-        "System Suggested": st.column_config.NumberColumn(width="small"),
-        "My Qty": st.column_config.NumberColumn(width="small", min_value=0),
-        "Unit Price ($)": st.column_config.NumberColumn(format="$%.2f", width="small"),
-        "Total ($)": st.column_config.NumberColumn(format="$%.2f", width="small"),
-        "Status": st.column_config.TextColumn(width="small"),
+        "Product":               st.column_config.TextColumn(width="medium"),
+        "Store":                 st.column_config.TextColumn(width="small"),
+        "ABC":                   st.column_config.TextColumn(width="small"),
+        "ML Forecast (units)":   st.column_config.NumberColumn(width="small",
+                                     help="Ensemble model forecast scaled to lead time window"),
+        "Safety Stock":          st.column_config.NumberColumn(width="small",
+                                     help=f"Z × σ × √lead_time  (Z at {int(service_level*100)}% SL)"),
+        "System Suggested":      st.column_config.NumberColumn(width="small"),
+        "My Qty":                st.column_config.NumberColumn(width="small", min_value=0),
+        "Unit Price ($)":        st.column_config.NumberColumn(format="$%.2f", width="small"),
+        "Total ($)":             st.column_config.NumberColumn(format="$%.2f", width="small"),
+        "Status":                st.column_config.TextColumn(width="small"),
     },
-    disabled=["Product", "Store", "ABC", "ML Forecast (units)", "EOQ", "Safety Stock", "System Suggested", "Unit Price ($)", "Total ($)", "Status"],
+    disabled=["Product", "Store", "ABC", "ML Forecast (units)",
+              "Safety Stock", "System Suggested", "Unit Price ($)", "Total ($)", "Status"],
 )
 
-# Recalculate totals based on edited qty
-if "My Qty" in edited_df.columns and "Unit Price ($)" in edited_df.columns:
+# Recalculate totals on qty edit
+if "My Qty" in edited_df.columns:
     edited_df["Total ($)"] = (edited_df["My Qty"] * edited_df["Unit Price ($)"]).round(2)
-    new_total = edited_df["Total ($)"].sum()
-    st.markdown(f"**Adjusted total: ${new_total:,.2f}**")
+
+# ── Order summary footer ───────────────────────────────────────────────────────
+adj_total = edited_df["Total ($)"].sum()
+adj_urgent = int((edited_df["ABC"] == "A").sum())
+ml_total = int(edited_df["ML Forecast (units)"].sum())
+
+st.markdown(f"""
+<div style="
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 16px 24px;
+    margin-top: 8px;
+    background: #0f172a;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+">
+    <div style="color:#94a3b8; font-size:0.85rem; line-height:2;">
+        <div>ML Forecast total &nbsp;<span style="color:#e2e8f0;">{ml_total:,} units</span></div>
+        <div>Urgent lines (A-class) &nbsp;<span style="color:#ef4444; font-weight:600;">{adj_urgent}</span></div>
+        <div>Min order qty &nbsp;<span style="color:#e2e8f0;">{min_order} units</span></div>
+    </div>
+    <div style="text-align:right;">
+        <div style="color:#64748b; font-size:0.8rem;">ORDER TOTAL</div>
+        <div style="font-size:2rem; font-weight:700; color:#e2e8f0;">${adj_total:,.2f}</div>
+        <div style="color:#64748b; font-size:0.75rem;">{len(edited_df)} line items</div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
 st.divider()
 
 # ── Export ────────────────────────────────────────────────────────────────────
-st.subheader("Export")
+st.markdown("#### Export")
 col1, col2 = st.columns(2)
 
+# Merge edited qty/total back into full df for export
+export_df = df_full.copy()
+export_df["My Qty"] = edited_df["My Qty"].values
+export_df["Total ($)"] = edited_df["Total ($)"].values
+
 with col1:
-    csv_bytes = edited_df.to_csv(index=False).encode()
+    csv_bytes = export_df.to_csv(index=False).encode()
     st.download_button("⬇ Download CSV", data=csv_bytes,
                        file_name="purchase_orders.csv", mime="text/csv",
                        use_container_width=True)
 
 with col2:
     po_bytes = generate_po_excel(
-        df=edited_df,
+        df=export_df,
         lead_time=lead_time,
         service_level=service_level,
         store_filter=store_filter,
@@ -112,11 +194,7 @@ with col2:
     st.download_button(
         "⬇ Download Purchase Order (Excel)",
         data=po_bytes,
-        file_name=f"purchase_order_{date.today().strftime('%Y%m%d')}.xlsx",
+        file_name=f"purchase_order_{today.strftime('%Y%m%d')}.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         use_container_width=True,
     )
-
-st.divider()
-st.info("**AI note:** A-class items are prioritized based on safety stock parameters and ABC classification. "
-        "Edit quantities in the table above to reflect your manual adjustments.")
