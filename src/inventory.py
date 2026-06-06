@@ -49,7 +49,7 @@ def build_orders(
     merged = params.merge(agg, on=["store_nbr", "family"], how="left")
     merged = merged.merge(stock_df, on=["store_nbr", "family"], how="left")
     merged["forecast"] = merged["forecast"].fillna(merged["mean_daily"] * lead_time)
-    merged["current_stock"] = merged["current_stock"].fillna(merged["safety_stock"])
+    merged["current_stock"] = merged["current_stock"].fillna(0)
 
     val_period_days = int(val["date"].nunique()) if "date" in val.columns else lead_time
 
