@@ -59,11 +59,12 @@ def make_forecast_chart(history: pd.DataFrame, forecast: pd.DataFrame) -> go.Fig
 
     fig.update_layout(
         height=320,
-        margin=dict(t=20, r=20, b=40, l=55),
-        plot_bgcolor="#fff", paper_bgcolor="#fff",
-        xaxis=dict(showgrid=False),
-        yaxis=dict(gridcolor="#f1f5f9", title="Units sold"),
-        legend=dict(orientation="h", y=-0.25),
+        margin=dict(t=20, r=20, b=50, l=60),
+        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="#e2e8f0", size=13),
+        xaxis=dict(showgrid=False, tickfont=dict(size=12)),
+        yaxis=dict(gridcolor="#334155", title="Units sold", tickfont=dict(size=12)),
+        legend=dict(orientation="h", y=-0.3, font=dict(size=12)),
     )
     return fig
 
@@ -80,11 +81,12 @@ def make_shap_chart(shap_data: list) -> go.Figure:
         marker_color=colors,
     ))
     fig.update_layout(
-        height=260,
-        margin=dict(t=10, r=20, b=30, l=10),
-        plot_bgcolor="#fff", paper_bgcolor="#fff",
-        xaxis=dict(title="SHAP contribution", gridcolor="#f1f5f9"),
-        yaxis=dict(showgrid=False),
+        height=300,
+        margin=dict(t=10, r=20, b=40, l=160),
+        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="#e2e8f0", size=13),
+        xaxis=dict(title="SHAP contribution", gridcolor="#334155", tickfont=dict(size=12)),
+        yaxis=dict(showgrid=False, tickfont=dict(size=13)),
     )
     return fig
 

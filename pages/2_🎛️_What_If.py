@@ -33,11 +33,12 @@ def make_whatif_chart(baseline, scenario) -> go.Figure:
     ))
     fig.update_layout(
         height=280,
-        margin=dict(t=20, r=20, b=40, l=55),
-        plot_bgcolor="#fff", paper_bgcolor="#fff",
-        xaxis=dict(showgrid=False),
-        yaxis=dict(gridcolor="#f1f5f9", title="Units sold"),
-        legend=dict(orientation="h", y=-0.25),
+        margin=dict(t=20, r=20, b=50, l=60),
+        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="#e2e8f0", size=13),
+        xaxis=dict(showgrid=False, tickfont=dict(size=12)),
+        yaxis=dict(gridcolor="#334155", title="Units sold", tickfont=dict(size=12)),
+        legend=dict(orientation="h", y=-0.3, font=dict(size=12)),
     )
     return fig
 
