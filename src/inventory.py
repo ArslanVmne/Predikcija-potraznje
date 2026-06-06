@@ -85,6 +85,8 @@ def build_orders(
             "store": f"Store {int(row['store_nbr'])}",
             "store_nbr": int(row["store_nbr"]),
             "ml_forecast": round(info["forecast_demand"], 0),
+            "eoq": round(float(row["EOQ"]), 0),
+            "safety_stock": round(info["safety_stock"], 0),
             "suggested": info["order_qty"],
             "qty": info["order_qty"],
             "unit_price": round(unit_price, 2),

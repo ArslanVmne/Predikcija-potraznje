@@ -186,4 +186,18 @@ with col_left:
 
 with col_right:
     st.subheader("SHAP — Feature Contributions")
+
+    # Auto-generate natural language explanation
+    sorted_shap = sorted(shap_data, key=lambda x: x["value"], reverse=True)
+    top_pos = [d for d in sorted_shap if d["value"] > 0][:3]
+    top_neg = [d for d in sorted_shap if d["value"] < 0][-2:]
+
+    if top_pos:
+        drivers = " · ".join(f"**{d['label']}** (+{d['value']:.2f})" for d in top_pos)
+        explanation = f"Demand for **{family}** is driven by: {drivers}"
+        if top_neg:
+            suppressors = " · ".join(f"**{d['label']}** ({d['value']:.2f})" for d in reversed(top_neg))
+            explanation += f"  \nSuppressed by: {suppressors}"
+        st.info(explanation)
+
     st.plotly_chart(make_shap_chart(shap_data), use_container_width=True)

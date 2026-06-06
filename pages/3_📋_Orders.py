@@ -42,8 +42,8 @@ def get_orders(lead_time, service_level, min_order, store_filter):
 
 
 orders = get_orders(lead_time, service_level, min_order, store_num)
-df = pd.DataFrame(orders)[["product", "store", "abc", "ml_forecast", "suggested", "qty", "unit_price", "total", "status"]]
-df.columns = ["Product", "Store", "ABC", "ML Forecast (units)", "System Suggested", "My Qty", "Unit Price ($)", "Total ($)", "Status"]
+df = pd.DataFrame(orders)[["product", "store", "abc", "ml_forecast", "eoq", "safety_stock", "suggested", "qty", "unit_price", "total", "status"]]
+df.columns = ["Product", "Store", "ABC", "ML Forecast (units)", "EOQ", "Safety Stock", "System Suggested", "My Qty", "Unit Price ($)", "Total ($)", "Status"]
 
 total_value = df["Total ($)"].sum()
 today = date.today().strftime("%b %d, %Y")
@@ -73,13 +73,15 @@ edited_df = st.data_editor(
         "Store": st.column_config.TextColumn(width="small"),
         "ABC": st.column_config.TextColumn(width="small"),
         "ML Forecast (units)": st.column_config.NumberColumn(width="small", help="Ensemble model forecast for the lead time window"),
+        "EOQ": st.column_config.NumberColumn(width="small", help="Economic Order Quantity — optimal batch size minimising ordering + holding costs"),
+        "Safety Stock": st.column_config.NumberColumn(width="small", help=f"Buffer stock = Z × σ × √lead_time  (Z={service_level:.0%} service level)"),
         "System Suggested": st.column_config.NumberColumn(width="small"),
         "My Qty": st.column_config.NumberColumn(width="small", min_value=0),
         "Unit Price ($)": st.column_config.NumberColumn(format="$%.2f", width="small"),
         "Total ($)": st.column_config.NumberColumn(format="$%.2f", width="small"),
         "Status": st.column_config.TextColumn(width="small"),
     },
-    disabled=["Product", "Store", "ABC", "ML Forecast (units)", "System Suggested", "Unit Price ($)", "Total ($)", "Status"],
+    disabled=["Product", "Store", "ABC", "ML Forecast (units)", "EOQ", "Safety Stock", "System Suggested", "Unit Price ($)", "Total ($)", "Status"],
 )
 
 # Recalculate totals based on edited qty
