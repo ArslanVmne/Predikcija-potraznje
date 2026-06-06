@@ -1,0 +1,132 @@
+import io
+from datetime import date
+
+import pandas as pd
+from openpyxl import Workbook
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+from openpyxl.utils import get_column_letter
+
+
+def _border(style="thin"):
+    s = Side(style=style, color="CCCCCC")
+    return Border(left=s, right=s, top=s, bottom=s)
+
+
+def _fill(hex_color):
+    return PatternFill(fill_type="solid", fgColor=hex_color)
+
+
+def generate_po_excel(
+    df: pd.DataFrame,
+    lead_time: int,
+    service_level: float,
+    store_filter: str,
+) -> bytes:
+    """
+    Generate a formatted purchase order Excel file.
+    df must have columns: Product, Store, ABC, ML Forecast (units),
+    System Suggested, My Qty, Unit Price ($), Total ($), Status
+    """
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Purchase Order"
+
+    today = date.today().strftime("%B %d, %Y")
+    po_number = f"PO-{date.today().strftime('%Y%m%d')}-{abs(hash(store_filter)) % 1000:03d}"
+    total_value = df["Total ($)"].sum()
+    urgent_count = int((df["ABC"] == "A").sum())
+
+    # ── Column widths ──────────────────────────────────────────────────────────
+    col_widths = [22, 10, 6, 18, 18, 12, 14, 14, 12]
+    for i, w in enumerate(col_widths, 1):
+        ws.column_dimensions[get_column_letter(i)].width = w
+
+    # ── Header block ───────────────────────────────────────────────────────────
+    ws.row_dimensions[1].height = 30
+    ws.row_dimensions[2].height = 20
+
+    title_cell = ws.cell(row=1, column=1, value="PURCHASE ORDER")
+    title_cell.font = Font(name="Calibri", bold=True, size=18, color="1E3A5F")
+    title_cell.alignment = Alignment(vertical="center")
+    ws.merge_cells("A1:D1")
+
+    company_cell = ws.cell(row=2, column=1, value="ForecastIQ — Supply Chain Intelligence")
+    company_cell.font = Font(name="Calibri", size=11, color="475569")
+    ws.merge_cells("A2:D2")
+
+    # PO metadata (right side)
+    meta = [
+        ("PO Number:", po_number),
+        ("Date:", today),
+        ("Lead Time:", f"{lead_time} days"),
+        ("Service Level:", f"{int(service_level * 100)}%"),
+        ("Store Filter:", store_filter),
+    ]
+    for i, (label, value) in enumerate(meta, 1):
+        ws.cell(row=i, column=6, value=label).font = Font(bold=True, color="475569", size=10)
+        ws.cell(row=i, column=7, value=value).font = Font(color="1E3A5F", size=10)
+
+    # Separator row
+    ws.row_dimensions[7].height = 6
+    for col in range(1, 10):
+        ws.cell(row=7, column=col).fill = _fill("1E3A5F")
+
+    # ── Column headers ─────────────────────────────────────────────────────────
+    headers = ["Product", "Store", "ABC", "ML Forecast\n(units)", "Sys. Suggested",
+               "Order Qty", "Unit Price ($)", "Total ($)", "Status"]
+    ws.row_dimensions[8].height = 32
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(row=8, column=col, value=header)
+        cell.fill = _fill("1E3A5F")
+        cell.font = Font(name="Calibri", bold=True, color="FFFFFF", size=10)
+        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        cell.border = _border()
+
+    # ── Data rows ─────────────────────────────────────────────────────────────
+    abc_colors = {"A": "FEE2E2", "B": "FEF9C3", "C": "EFF6FF"}
+
+    data_cols = ["Product", "Store", "ABC", "ML Forecast (units)",
+                 "System Suggested", "My Qty", "Unit Price ($)", "Total ($)", "Status"]
+
+    for r_idx, row in enumerate(df[data_cols].itertuples(index=False), 9):
+        ws.row_dimensions[r_idx].height = 18
+        abc = row[2]
+        row_fill = _fill(abc_colors.get(abc, "FFFFFF"))
+        values = list(row)
+        for c_idx, value in enumerate(values, 1):
+            cell = ws.cell(row=r_idx, column=c_idx, value=value)
+            cell.fill = row_fill
+            cell.border = _border()
+            cell.font = Font(name="Calibri", size=10)
+            cell.alignment = Alignment(vertical="center",
+                                       horizontal="right" if c_idx > 3 else "left")
+            if c_idx in (7, 8):
+                cell.number_format = '$#,##0.00'
+
+    # ── Summary row ────────────────────────────────────────────────────────────
+    last_data_row = 8 + len(df)
+    summary_row = last_data_row + 2
+    ws.row_dimensions[summary_row].height = 20
+
+    ws.cell(row=summary_row, column=6, value="TOTAL ORDER VALUE:").font = Font(bold=True, size=11, color="1E3A5F")
+    total_cell = ws.cell(row=summary_row, column=8, value=total_value)
+    total_cell.font = Font(bold=True, size=11, color="1E3A5F")
+    total_cell.number_format = '$#,##0.00'
+
+    ws.cell(row=summary_row + 1, column=6, value="Urgent (A-class) items:").font = Font(size=10, color="DC2626")
+    ws.cell(row=summary_row + 1, column=8, value=urgent_count).font = Font(bold=True, size=10, color="DC2626")
+
+    # ── Footer ─────────────────────────────────────────────────────────────────
+    footer_row = summary_row + 3
+    ws.cell(row=footer_row, column=1,
+            value=f"Generated by ForecastIQ on {today} · Quantities based on ensemble ML forecast + EOQ safety stock"
+            ).font = Font(size=9, color="94A3B8", italic=True)
+    ws.merge_cells(f"A{footer_row}:I{footer_row}")
+
+    # ── Freeze header ──────────────────────────────────────────────────────────
+    ws.freeze_panes = "A9"
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return buf.getvalue()

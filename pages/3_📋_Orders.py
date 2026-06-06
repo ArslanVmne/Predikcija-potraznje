@@ -6,6 +6,7 @@ import streamlit as st
 
 from src.data_loader import get_stores
 from src.inventory import build_orders
+from src.po_generator import generate_po_excel
 
 st.set_page_config(page_title="Orders — ForecastIQ", page_icon="📋", layout="wide")
 st.sidebar.markdown("## 📈 ForecastIQ")
@@ -100,14 +101,19 @@ with col1:
                        use_container_width=True)
 
 with col2:
-    xlsx_buf = io.BytesIO()
-    with pd.ExcelWriter(xlsx_buf, engine="openpyxl") as writer:
-        edited_df.to_excel(writer, index=False, sheet_name="Orders")
-    xlsx_buf.seek(0)
-    st.download_button("⬇ Download Excel", data=xlsx_buf.getvalue(),
-                       file_name="purchase_orders.xlsx",
-                       mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                       use_container_width=True)
+    po_bytes = generate_po_excel(
+        df=edited_df,
+        lead_time=lead_time,
+        service_level=service_level,
+        store_filter=store_filter,
+    )
+    st.download_button(
+        "⬇ Download Purchase Order (Excel)",
+        data=po_bytes,
+        file_name=f"purchase_order_{date.today().strftime('%Y%m%d')}.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        use_container_width=True,
+    )
 
 st.divider()
 st.info("**AI note:** A-class items are prioritized based on safety stock parameters and ABC classification. "
