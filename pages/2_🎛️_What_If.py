@@ -65,7 +65,7 @@ with col_ctrl:
     holiday = st.toggle("Corpus Christi (Jun 4)", value=True)
     oil = st.slider("Oil price ($/barrel)", 50, 150, 88)
 
-    run = st.button("▶ Run Simulation", type="primary", use_container_width=True)
+    run = st.button("▶ Run Simulation", type="primary", width="stretch")
 
 # ── Simulation ────────────────────────────────────────────────────────────────
 with col_main:
@@ -113,7 +113,7 @@ with col_main:
     st.subheader("Baseline vs Scenario")
     baseline_records = baseline_df.to_dict(orient="records")
     scenario_records = scenario_df.to_dict(orient="records")
-    st.plotly_chart(make_whatif_chart(baseline_records, scenario_records), use_container_width=True)
+    st.plotly_chart(make_whatif_chart(baseline_records, scenario_records), width="stretch")
 
     st.divider()
 

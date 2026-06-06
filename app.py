@@ -111,7 +111,7 @@ col_left, col_right = st.columns([2, 1])
 with col_left:
     st.subheader(f"Actions This Week  —  `{data['kpis']['pending_count']} pending`")
     df_pending = pd.DataFrame(data["pending"])
-    st.dataframe(df_pending, use_container_width=True, hide_index=True)
+    st.dataframe(df_pending, width="stretch", hide_index=True)
 
 with col_right:
     st.subheader("External Factors")

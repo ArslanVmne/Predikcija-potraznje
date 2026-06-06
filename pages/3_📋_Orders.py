@@ -63,7 +63,7 @@ st.caption("Edit **My Qty** column to adjust quantities. A-class items are highl
 
 edited_df = st.data_editor(
     df,
-    use_container_width=True,
+    width="stretch",
     hide_index=True,
     column_config={
         "Product": st.column_config.TextColumn(width="medium"),
@@ -94,7 +94,7 @@ with col1:
     csv_bytes = edited_df.to_csv(index=False).encode()
     st.download_button("⬇ Download CSV", data=csv_bytes,
                        file_name="purchase_orders.csv", mime="text/csv",
-                       use_container_width=True)
+                       width="stretch")
 
 with col2:
     xlsx_buf = io.BytesIO()
@@ -104,7 +104,7 @@ with col2:
     st.download_button("⬇ Download Excel", data=xlsx_buf.getvalue(),
                        file_name="purchase_orders.xlsx",
                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                       use_container_width=True)
+                       width="stretch")
 
 st.divider()
 st.info("**AI note:** A-class items are prioritized based on safety stock parameters and ABC classification. "

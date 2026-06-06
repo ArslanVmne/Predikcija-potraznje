@@ -89,7 +89,7 @@ if step == 1:
 
     with col_demo:
         st.markdown("**Or use demo data**")
-        if st.button("Use Favorita demo dataset", use_container_width=True):
+        if st.button("Use Favorita demo dataset", width="stretch"):
             st.session_state.upload_session = {
                 "filename": "train.csv (demo)",
                 "rows": 3_000_888,
@@ -113,7 +113,7 @@ elif step == 2:
 
     if mapping:
         map_df = pd.DataFrame(list(mapping.items()), columns=["Your column", "→ System column"])
-        st.dataframe(map_df, use_container_width=True, hide_index=True)
+        st.dataframe(map_df, width="stretch", hide_index=True)
     if missing:
         st.warning(f"Could not auto-map: **{', '.join(missing)}**. Kaggle train.csv format is recommended.")
     else:
@@ -121,7 +121,7 @@ elif step == 2:
 
     if session.get("preview") is not None:
         with st.expander("Preview (first 5 rows)"):
-            st.dataframe(session["preview"], use_container_width=True, hide_index=True)
+            st.dataframe(session["preview"], width="stretch", hide_index=True)
 
     c1, c2 = st.columns([1, 6])
     with c1:
