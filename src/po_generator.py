@@ -72,8 +72,8 @@ def generate_po_excel(
         ws.cell(row=7, column=col).fill = _fill("1E3A5F")
 
     # ── Column headers ─────────────────────────────────────────────────────────
-    headers = ["Product", "Store", "ABC", "ML Forecast\n(units)", "Sys. Suggested",
-               "Order Qty", "Unit Price ($)", "Total ($)", "Status"]
+    headers = ["Product", "Store", "ABC", "Forecasted\nDemand", "Order Qty",
+               "My Qty", "Unit Price ($)", "Total ($)", "Status"]
     ws.row_dimensions[8].height = 32
     for col, header in enumerate(headers, 1):
         cell = ws.cell(row=8, column=col, value=header)
@@ -85,8 +85,8 @@ def generate_po_excel(
     # ── Data rows ─────────────────────────────────────────────────────────────
     abc_colors = {"A": "FEE2E2", "B": "FEF9C3", "C": "EFF6FF"}
 
-    data_cols = ["Product", "Store", "ABC", "ML Forecast (units)",
-                 "System Suggested", "My Qty", "Unit Price ($)", "Total ($)", "Status"]
+    data_cols = ["Product", "Store", "ABC", "Forecasted Demand",
+                 "Order Qty", "My Qty", "Unit Price ($)", "Total ($)", "Status"]
 
     for r_idx, row in enumerate(df[data_cols].itertuples(index=False), 9):
         ws.row_dimensions[r_idx].height = 18
