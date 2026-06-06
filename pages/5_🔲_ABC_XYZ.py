@@ -86,26 +86,37 @@ with col_matrix:
     abc_order = ["A", "B", "C"]
     xyz_order = ["X", "Y", "Z"]
 
-    z_vals = [[counts.get(a + x, 0) for x in xyz_order] for a in abc_order]
     text_vals = [[f"{counts.get(a+x, 0)}" for x in xyz_order] for a in abc_order]
+    hover_vals = [[f"{CELL_DESC.get(a+x, '')}<br>{counts.get(a+x, 0)} SKUs" for x in xyz_order] for a in abc_order]
 
-    heatmap_colors = [
-        [0.0, "#16a34a"], [0.17, "#2563eb"],
-        [0.34, "#475569"], [0.5, "#ca8a04"],
-        [0.67, "#ea580c"], [0.84, "#dc2626"],
-        [1.0, "#991b1b"],
-    ]
+    # Each cell gets a fixed color ID (0–8) regardless of SKU count,
+    # so colors reflect risk classification, not volume.
+    cell_seq = ["AX", "AY", "AZ", "BX", "BY", "BZ", "CX", "CY", "CZ"]
+    color_id = {c: i for i, c in enumerate(cell_seq)}
+    cell_colors = [CELL_COLOR[c] for c in cell_seq]
+
+    # Build discrete colorscale: each integer value i maps to cell_colors[i]
+    n = len(cell_colors)
+    colorscale = []
+    for i, color in enumerate(cell_colors):
+        colorscale.append([i / n, color])
+        colorscale.append([(i + 1) / n - 0.0001, color])
+    colorscale[-1][0] = 1.0
+
+    z_color = [[color_id[a + x] for x in xyz_order] for a in abc_order]
 
     fig_matrix = go.Figure(go.Heatmap(
-        z=z_vals,
+        z=z_color,
         x=["X — Stable", "Y — Variable", "Z — Unpredictable"],
         y=["A — High value", "B — Med value", "C — Low value"],
         text=text_vals,
+        customdata=hover_vals,
         texttemplate="%{text} SKUs",
         textfont=dict(size=15, color="white"),
-        colorscale=heatmap_colors,
+        colorscale=colorscale,
+        zmin=0, zmax=n - 1,
         showscale=False,
-        hovertemplate="<b>%{y} / %{x}</b><br>%{text} SKUs<extra></extra>",
+        hovertemplate="<b>%{customdata}</b><extra></extra>",
     ))
     fig_matrix.update_layout(
         height=300,
