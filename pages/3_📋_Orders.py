@@ -27,6 +27,13 @@ with st.sidebar:
     min_order = st.number_input("Min order qty", min_value=0, value=50, step=10)
     stores = cached_stores()
     store_filter = st.selectbox("Store", ["All"] + [f"Store {s}" for s in stores])
+    st.divider()
+    st.markdown("**Filter lines**")
+    status_filter = st.multiselect(
+        "Show status",
+        ["Critical", "Order Now", "Monitor", "OK"],
+        default=["Critical", "Order Now", "Monitor", "OK"],
+    )
 
 store_num = None if store_filter == "All" else int(store_filter.split()[-1])
 
@@ -47,6 +54,9 @@ df_full.columns = [
     "Product", "Store", "ABC", "Current Stock", "Safety Stock", "ROP",
     "Forecasted Demand", "Order Qty", "Unit Price ($)", "Total ($)", "Status"
 ]
+
+if status_filter:
+    df_full = df_full[df_full["Status"].isin(status_filter)].reset_index(drop=True)
 
 today = date.today()
 po_number = f"PO-{today.strftime('%Y%m%d')}-{abs(hash(store_filter)) % 1000:03d}"
