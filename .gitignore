@@ -1,6 +1,5 @@
 # Data
 data/raw/
-data/processed/
 *.csv
 *.zip
 
@@ -24,10 +23,8 @@ env/
 *.ipynb_checkpoints
 
 # Models
-models/*.pkl
 models/*.joblib
 models/*.h5
-models/*.pt
 models/*.bin
 
 # OS
