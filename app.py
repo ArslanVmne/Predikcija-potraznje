@@ -45,14 +45,20 @@ with col2:
 st.divider()
 
 st.markdown("### Navigate")
-c1, c2, c3, c4 = st.columns(4)
-c1.page_link("pages/1_📊_Forecast.py", label="Forecast", icon="📊")
-c2.page_link("pages/2_🎛️_What_If.py", label="What-If Simulator", icon="🎛️")
-c3.page_link("pages/3_📋_Orders.py", label="Purchase Orders", icon="📋")
-c4.page_link("pages/4_📤_Upload.py", label="Upload Data", icon="📤")
 
-_, c5, _ = st.columns([2, 1, 2])
-c5.page_link("pages/5_🔲_ABC_XYZ.py", label="ABC-XYZ Matrix", icon="🔲")
+nav_items = [
+    ("pages/1_📊_Forecast.py",  "📊", "Forecast",       "Daily demand · CI · anomaly detection"),
+    ("pages/2_🎛️_What_If.py", "🎛️", "What-If",         "Simulate promotions, holidays & oil"),
+    ("pages/3_📋_Orders.py",    "📋", "Orders",          "ML-based purchase order generator"),
+    ("pages/5_🔲_ABC_XYZ.py",  "🔲", "ABC-XYZ Matrix",  "Inventory risk segmentation"),
+    ("pages/4_📤_Upload.py",    "📤", "Upload Data",     "Upload your own sales CSV"),
+]
+
+cols = st.columns(5)
+for col, (path, icon, label, desc) in zip(cols, nav_items):
+    with col:
+        st.page_link(path, label=label, icon=icon)
+        st.caption(desc)
 
 st.divider()
 
