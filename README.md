@@ -48,12 +48,16 @@ Raw data
 
 ### Model performance (validation: Aug 1–15, 2017)
 
-| Model | MAPE |
+Metric: **RMSLE** (Root Mean Squared Log Error) — lower is better.
+
+| Model | RMSLE |
 |---|---|
-| LightGBM baseline | ~18% |
-| LightGBM + Prophet features | ~14% |
-| LSTM | ~16% |
-| **Ensemble** | **~12%** |
+| Naive baseline | 0.5690 |
+| LSTM | 0.4140 |
+| LightGBM + Prophet features | 0.3695 |
+| **Ensemble (α=0.90)** | **0.3689** |
+
+Ensemble improves **35.2%** over the naive baseline.
 
 ---
 
