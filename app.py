@@ -66,5 +66,5 @@ st.markdown("### Dataset")
 st.markdown("""
 [Store Sales — Time Series Forecasting](https://www.kaggle.com/competitions/store-sales-time-series-forecasting) — Kaggle competition dataset.
 3M+ daily sales records across 54 Ecuadorian grocery stores and 33 product categories (2013–2017).
-External factors included: oil prices, holidays, promotions, transactions.
+External factors included: oil prices, public holidays, and promotional campaigns.
 """)
