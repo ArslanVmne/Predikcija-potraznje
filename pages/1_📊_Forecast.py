@@ -109,8 +109,16 @@ stores = cached_stores()
 
 with st.sidebar:
     st.divider()
-    family = st.selectbox("Product family", families, index=families.index("PRODUCE") if "PRODUCE" in families else 0)
-    store = st.selectbox("Store", stores, index=0)
+    family = st.selectbox("Product family", families,
+                          index=families.index("PRODUCE") if "PRODUCE" in families else 0)
+
+    uploaded_stores = st.session_state.get("uploaded_stores", [])
+    if uploaded_stores:
+        store_options = [s for s in stores if s in uploaded_stores]
+        st.caption(f"Showing uploaded stores: {uploaded_stores}")
+    else:
+        store_options = stores
+    store = st.selectbox("Store", store_options, index=0)
 
 # ── Load data ─────────────────────────────────────────────────────────────────
 history = get_history(store, family, days=90)

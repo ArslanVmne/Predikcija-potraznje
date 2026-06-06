@@ -1,9 +1,10 @@
-import io
-
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
+
+from src.data_loader import load_val_preds
+from src.model_inference import get_forecast, lgbm_predict_what_if
 
 st.set_page_config(page_title="Upload — ForecastIQ", page_icon="📤", layout="wide")
 st.sidebar.markdown("## 📈 ForecastIQ")
@@ -276,50 +277,106 @@ elif step == 3:
             st.session_state.upload_step = 4
             st.rerun()
 
-# ── Step 4 — Done ─────────────────────────────────────────────────────────────
+# ── Step 4 — Forecast results ─────────────────────────────────────────────────
 elif step == 4:
     meta = st.session_state.upload_meta
-    df = st.session_state.upload_df
+    raw_df = st.session_state.upload_df
     mapping = meta["mapping"]
 
-    df_mapped = df.rename(columns=mapping).copy()
+    df_mapped = raw_df.rename(columns=mapping).copy()
     df_mapped["date"] = pd.to_datetime(df_mapped["date"], errors="coerce")
+    df_mapped["store_nbr"] = pd.to_numeric(df_mapped["store_nbr"], errors="coerce")
+    df_mapped = df_mapped.dropna(subset=["date", "store_nbr", "family"])
 
-    st.success(f"**{meta['filename']}** validated and ready.")
+    uploaded_stores = sorted(df_mapped["store_nbr"].dropna().astype(int).unique().tolist())
+    uploaded_families = sorted(df_mapped["family"].unique().tolist())
+    date_max = df_mapped["date"].max()
 
-    col_a, col_b = st.columns(2)
-    with col_a:
-        st.markdown("#### Summary")
-        st.markdown(f"""
-| | |
-|---|---|
-| Rows loaded | {len(df_mapped):,} |
-| Stores | {df_mapped['store_nbr'].nunique()} |
-| Families | {df_mapped['family'].nunique()} |
-| From | {df_mapped['date'].min().strftime('%B %d, %Y')} |
-| To | {df_mapped['date'].max().strftime('%B %d, %Y')} |
-""")
+    # Check which store/family combos exist in the model's val predictions
+    val = load_val_preds()
+    supported = val[
+        val["store_nbr"].isin(uploaded_stores)
+    ][["store_nbr", "family"]].drop_duplicates()
+    n_supported = len(supported)
 
-    with col_b:
-        st.markdown("#### What happens next")
-        st.info("""
-In a production deployment, ForecastIQ would:
-1. Run feature engineering (lags, rolling stats, Prophet components)
-2. Re-train or fine-tune the LightGBM + LSTM ensemble
-3. Recompute inventory parameters (EOQ, safety stock, ABC-XYZ)
+    st.success(f"**{meta['filename']}** — {len(df_mapped):,} rows loaded.")
+    st.info(
+        f"Your data covers **{date_max.strftime('%B %d, %Y')}**. "
+        f"The pre-trained ensemble model will forecast the **next 15 days** "
+        f"(Aug 1–15, 2017) for **{n_supported} store/family combinations** "
+        f"found in your upload."
+    )
 
-For this demo the pre-trained Favorita model is used.
-The Forecast and Orders pages reflect results on the **2017 validation period**.
-""")
+    if n_supported == 0:
+        st.warning("None of the stores in your file are in the model's training set. "
+                   "Try uploading demo_sales.csv to see the full pipeline.")
+    else:
+        # Run inference for all supported combos
+        with st.spinner(f"Running ensemble model on {n_supported} combinations..."):
+            rows = []
+            for _, r in supported.iterrows():
+                fc = get_forecast(int(r["store_nbr"]), r["family"])
+                if not fc.empty:
+                    total = float(fc["yhat"].sum())
+                    rows.append({
+                        "store_nbr": int(r["store_nbr"]),
+                        "family": r["family"],
+                        "forecast_15d": round(total, 0),
+                    })
+            fc_df = pd.DataFrame(rows)
 
-    st.divider()
+        st.divider()
+        st.subheader("Forecast Results — Aug 1–15, 2017")
+
+        # KPIs
+        k1, k2, k3 = st.columns(3)
+        k1.metric("Store/family combos forecast", len(fc_df))
+        k2.metric("Total forecasted demand", f"{int(fc_df['forecast_15d'].sum()):,} units")
+        k3.metric("Avg per combination", f"{int(fc_df['forecast_15d'].mean()):,} units")
+
+        col_left, col_right = st.columns(2)
+
+        # Top families by forecast
+        with col_left:
+            st.markdown("**Top families by 15-day forecast**")
+            top_fam = (fc_df.groupby("family")["forecast_15d"]
+                       .sum().sort_values(ascending=True).tail(10).reset_index())
+            fig = go.Figure(go.Bar(
+                x=top_fam["forecast_15d"], y=top_fam["family"],
+                orientation="h",
+                marker_color="#2563eb",
+                text=top_fam["forecast_15d"].astype(int),
+                textposition="outside",
+            ))
+            fig.update_layout(height=300, **CHART_LAYOUT,
+                              xaxis=dict(title="Forecasted units", gridcolor="#334155"),
+                              yaxis=dict(showgrid=False))
+            st.plotly_chart(fig, use_container_width=True)
+
+        # Forecast by store
+        with col_right:
+            st.markdown("**Forecasted demand by store**")
+            by_store = fc_df.groupby("store_nbr")["forecast_15d"].sum().reset_index()
+            by_store["store_nbr"] = by_store["store_nbr"].astype(str)
+            fig2 = px.bar(by_store, x="store_nbr", y="forecast_15d",
+                          labels={"store_nbr": "Store", "forecast_15d": "Forecasted units"},
+                          color_discrete_sequence=["#16a34a"])
+            fig2.update_layout(height=300, **CHART_LAYOUT,
+                               xaxis=dict(showgrid=False),
+                               yaxis=dict(gridcolor="#334155"))
+            st.plotly_chart(fig2, use_container_width=True)
+
+        # Store uploaded stores in session so Forecast page can pre-filter
+        st.session_state["uploaded_stores"] = uploaded_stores
+
+        st.divider()
 
     c1, c2, c3 = st.columns(3)
     with c1:
-        if st.button("Go to Forecast →", type="primary", use_container_width=True):
+        if st.button("Explore Forecast →", type="primary", use_container_width=True):
             st.switch_page("pages/1_📊_Forecast.py")
     with c2:
-        if st.button("Go to Orders →", use_container_width=True):
+        if st.button("View Orders →", use_container_width=True):
             st.switch_page("pages/3_📋_Orders.py")
     with c3:
         if st.button("Upload another file", use_container_width=True):
