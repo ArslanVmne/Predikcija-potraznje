@@ -12,15 +12,13 @@ def compute_order_quantity(
     lead_time: int = 7,
     service_level: float = 0.95,
     current_stock: float = 0.0,
-    min_order: int = 50,
     ml_forecast: float | None = None,
 ) -> dict:
     z = {0.90: 1.28, 0.95: 1.645, 0.99: 2.326}.get(service_level, 1.645)
     safety_stock = z * std_daily * math.sqrt(lead_time)
     rop = mean_daily * lead_time + safety_stock
-    # Use ML ensemble forecast if available, otherwise fall back to historical mean
     forecast_demand = ml_forecast if ml_forecast is not None else mean_daily * lead_time
-    order_qty = max(int(round(forecast_demand + safety_stock - current_stock)), min_order)
+    order_qty = max(int(round(forecast_demand + safety_stock - current_stock)), 0)
     return {
         "safety_stock": round(safety_stock, 1),
         "rop": round(rop, 1),
@@ -32,7 +30,6 @@ def compute_order_quantity(
 def build_orders(
     lead_time: int = 7,
     service_level: float = 0.95,
-    min_order: int = 50,
     store_filter: int | None = None,
 ) -> list[dict]:
     params = load_inventory_params()
@@ -68,7 +65,6 @@ def build_orders(
             lead_time=lead_time,
             service_level=service_level,
             current_stock=current_stock,
-            min_order=min_order,
             ml_forecast=ml_forecast,
         )
 

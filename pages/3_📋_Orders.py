@@ -24,7 +24,6 @@ with st.sidebar:
     lead_time = st.number_input("Lead time (days)", min_value=1, max_value=30, value=7)
     service_level = st.selectbox("Service level", [0.90, 0.95, 0.99],
                                  index=1, format_func=lambda x: f"{int(x*100)}%")
-    min_order = st.number_input("Min order qty", min_value=0, value=50, step=10)
     stores = cached_stores()
     store_filter = st.selectbox("Store", ["All"] + [f"Store {s}" for s in stores])
     st.divider()
@@ -40,12 +39,12 @@ store_num = None if store_filter == "All" else int(store_filter.split()[-1])
 
 # ── Load orders ───────────────────────────────────────────────────────────────
 @st.cache_data
-def get_orders(lead_time, service_level, min_order, store_num):
+def get_orders(lead_time, service_level, store_num):
     return build_orders(lead_time=lead_time, service_level=service_level,
-                        min_order=min_order, store_filter=store_num)
+                        store_filter=store_num)
 
 
-orders = get_orders(lead_time, service_level, min_order, store_num)
+orders = get_orders(lead_time, service_level, store_num)
 df_full = pd.DataFrame(orders)[
     ["product", "store", "abc", "current_stock", "safety_stock", "rop",
      "ml_forecast", "suggested", "unit_price", "total", "status"]
@@ -168,8 +167,8 @@ st.markdown(f"""
 ">
     <div style="color:#94a3b8; font-size:0.85rem; line-height:2;">
         <div>Forecasted demand &nbsp;<span style="color:#e2e8f0;">{ml_total:,} units</span></div>
-        <div>Critical lines &nbsp;<span style="color:#ef4444; font-weight:600;">{adj_critical} (below safety stock)</span></div>
-        <div>Order now &nbsp;<span style="color:#f59e0b; font-weight:600;">{adj_order_now} (below ROP)</span></div>
+        <div>Critical &nbsp;<span style="color:#ef4444; font-weight:600;">{adj_critical} lines (below safety stock)</span></div>
+        <div>Order now &nbsp;<span style="color:#f59e0b; font-weight:600;">{adj_order_now} lines (below ROP)</span></div>
     </div>
     <div style="text-align:right;">
         <div style="color:#64748b; font-size:0.8rem;">ORDER TOTAL</div>
