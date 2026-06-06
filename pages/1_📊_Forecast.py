@@ -3,6 +3,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
+from src.anomaly import detect_anomalies
 from src.data_loader import get_families, get_stores, load_inventory_params, load_shap_by_family
 from src.model_inference import get_forecast, get_history, get_mape
 
@@ -33,7 +34,7 @@ def cached_stores():
     return get_stores()
 
 
-def make_forecast_chart(history: pd.DataFrame, forecast: pd.DataFrame) -> go.Figure:
+def make_forecast_chart(history: pd.DataFrame, forecast: pd.DataFrame, anomalies: pd.DataFrame) -> go.Figure:
     fig = go.Figure()
 
     fig.add_trace(go.Scatter(
@@ -41,6 +42,17 @@ def make_forecast_chart(history: pd.DataFrame, forecast: pd.DataFrame) -> go.Fig
         name="History", mode="lines",
         line=dict(color="#94a3b8", width=2),
     ))
+
+    # Anomaly markers
+    anom = anomalies[anomalies["is_anomaly"]]
+    if not anom.empty:
+        fig.add_trace(go.Scatter(
+            x=anom["date"], y=anom["sales"],
+            name="Anomaly", mode="markers",
+            marker=dict(color="#ef4444", size=10, symbol="circle",
+                        line=dict(color="#fff", width=1.5)),
+            hovertemplate="<b>%{x}</b><br>Sales: %{y}<extra>Anomaly</extra>",
+        ))
 
     if not forecast.empty:
         dates = forecast["date"].tolist()
@@ -103,6 +115,7 @@ with st.sidebar:
 # ── Load data ─────────────────────────────────────────────────────────────────
 history = get_history(store, family, days=90)
 forecast = get_forecast(store, family)
+anomalies = detect_anomalies(history)
 mape = get_mape(store, family)
 
 forecast_total = int(forecast["yhat"].sum()) if not forecast.empty else 0
@@ -137,17 +150,30 @@ st.title(f"Sales Forecast — {family}")
 st.caption(f"Store {store}  ·  Validation period: Aug 1–15, 2017  ·  Ensemble model")
 
 # KPIs
-k1, k2, k3 = st.columns(3)
+n_anomalies = int(anomalies["is_anomaly"].sum())
+
+k1, k2, k3, k4 = st.columns(4)
 k1.metric("15-day Forecast", f"{forecast_total:,} units")
 k2.metric("MAPE", f"{mape}%", delta=f"{'Excellent' if mape < 10 else 'Acceptable'}", delta_color="off")
 k3.metric("Trend vs prior period", f"{'+' if trend_pct >= 0 else ''}{trend_pct}%",
           delta_color="normal" if trend_pct >= 0 else "inverse")
+k4.metric("Anomalies (90d)", n_anomalies, delta="Detected" if n_anomalies > 0 else "None",
+          delta_color="inverse" if n_anomalies > 0 else "off")
 
 st.divider()
 
 # Forecast chart
 st.subheader("Forecast with Confidence Interval — 95% CI")
-st.plotly_chart(make_forecast_chart(history, forecast), use_container_width=True)
+st.plotly_chart(make_forecast_chart(history, forecast, anomalies), use_container_width=True)
+
+# Anomaly table
+if n_anomalies > 0:
+    with st.expander(f"Detected anomalies — {n_anomalies} event(s) in last 90 days"):
+        anom_df = anomalies[anomalies["is_anomaly"]][["date", "sales", "direction", "zscore"]].copy()
+        anom_df.columns = ["Date", "Sales", "Type", "Z-score"]
+        anom_df["Type"] = anom_df["Type"].map({"spike": "Demand spike", "drop": "Demand drop"})
+        anom_df = anom_df.sort_values("Date", ascending=False)
+        st.dataframe(anom_df, use_container_width=True, hide_index=True)
 
 st.divider()
 
