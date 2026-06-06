@@ -41,11 +41,11 @@ def get_orders(lead_time, service_level, min_order, store_num):
 orders = get_orders(lead_time, service_level, min_order, store_num)
 df_full = pd.DataFrame(orders)[
     ["product", "store", "abc", "current_stock", "safety_stock", "rop",
-     "ml_forecast", "suggested", "qty", "unit_price", "total", "status"]
+     "ml_forecast", "suggested", "unit_price", "total", "status"]
 ]
 df_full.columns = [
     "Product", "Store", "ABC", "Current Stock", "Safety Stock", "ROP",
-    "Forecasted Demand", "Order Qty", "My Qty", "Unit Price ($)", "Total ($)", "Status"
+    "Forecasted Demand", "Order Qty", "Unit Price ($)", "Total ($)", "Status"
 ]
 
 today = date.today()
@@ -108,15 +108,10 @@ st.divider()
 
 # ── Order line items ───────────────────────────────────────────────────────────
 st.markdown("#### Order Lines")
-st.caption("Edit **My Qty** to adjust. A-class items are priority — reorder before stock drops below safety stock.")
-
-# Show only the columns relevant to the order form (no internal columns)
-df_view = df_full[["Product", "Store", "ABC", "Current Stock", "Safety Stock", "ROP",
-                    "Forecasted Demand", "Order Qty", "My Qty",
-                    "Unit Price ($)", "Total ($)", "Status"]].copy()
+st.caption("Edit **Order Qty** to adjust. Totals recalculate automatically.")
 
 edited_df = st.data_editor(
-    df_view,
+    df_full,
     use_container_width=True,
     hide_index=True,
     column_config={
@@ -128,23 +123,21 @@ edited_df = st.data_editor(
         "Safety Stock":      st.column_config.NumberColumn(width="small",
                                  help=f"Minimum buffer = Z × σ × √lead_time at {int(service_level*100)}% SL"),
         "ROP":               st.column_config.NumberColumn(width="small",
-                                 help="Reorder Point — order when stock falls below this"),
+                                 help="Reorder Point — order when stock drops below this"),
         "Forecasted Demand": st.column_config.NumberColumn(width="small",
                                  help="Ensemble model prediction for the lead time window"),
-        "Order Qty":         st.column_config.NumberColumn(width="small",
-                                 help="Forecasted Demand + Safety Stock − Current Stock"),
-        "My Qty":            st.column_config.NumberColumn(width="small", min_value=0),
+        "Order Qty":         st.column_config.NumberColumn(width="small", min_value=0,
+                                 help="Forecasted Demand + Safety Stock − Current Stock. Edit to override."),
         "Unit Price ($)":    st.column_config.NumberColumn(format="$%.2f", width="small"),
         "Total ($)":         st.column_config.NumberColumn(format="$%.2f", width="small"),
         "Status":            st.column_config.TextColumn(width="small"),
     },
     disabled=["Product", "Store", "ABC", "Current Stock", "Safety Stock", "ROP",
-              "Forecasted Demand", "Order Qty", "Unit Price ($)", "Total ($)", "Status"],
+              "Forecasted Demand", "Unit Price ($)", "Total ($)", "Status"],
 )
 
-# Recalculate totals on qty edit
-if "My Qty" in edited_df.columns:
-    edited_df["Total ($)"] = (edited_df["My Qty"] * edited_df["Unit Price ($)"]).round(2)
+# Recalculate totals when Order Qty is edited
+edited_df["Total ($)"] = (edited_df["Order Qty"] * edited_df["Unit Price ($)"]).round(2)
 
 # ── Order summary footer ───────────────────────────────────────────────────────
 adj_total = edited_df["Total ($)"].sum()
@@ -182,10 +175,7 @@ st.divider()
 st.markdown("#### Export")
 col1, col2 = st.columns(2)
 
-# Merge edited qty/total back into full df for export
-export_df = df_full.copy()
-export_df["My Qty"] = edited_df["My Qty"].values
-export_df["Total ($)"] = edited_df["Total ($)"].values
+export_df = edited_df.copy()
 
 with col1:
     csv_bytes = export_df.to_csv(index=False).encode()
