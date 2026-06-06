@@ -79,7 +79,9 @@ def lgbm_predict_what_if(
         return pd.DataFrame(columns=["date", "sales"])
 
     if onpromotion_override is not None:
-        df["onpromotion"] = int(onpromotion_override)
+        # onpromotion_override is a multiplier (e.g. 1.5 = 50% more promo items)
+        # floor at 10 so zero-promo items still see a meaningful boost
+        df["onpromotion"] = (df["onpromotion"].clip(lower=10) * onpromotion_override).round().astype(int)
     if oil_override is not None:
         df["oil_price"] = float(oil_override)
     if holiday_override is not None:

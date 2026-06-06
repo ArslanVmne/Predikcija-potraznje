@@ -63,8 +63,8 @@ with col_ctrl:
     discount = st.slider("Discount (%)", 0, 50, 15, step=5)
 
     st.markdown("**External factors**")
-    holiday = st.toggle("Corpus Christi (Jun 4)", value=True)
-    oil = st.slider("Oil price ($/barrel)", 50, 150, 88)
+    holiday = st.toggle("National holiday", value=False)
+    oil = st.slider("Oil price ($/barrel)", 30, 100, 49)
 
     run = st.button("▶ Run Simulation", type="primary", use_container_width=True)
 
@@ -80,7 +80,7 @@ with col_main:
             baseline_df = lgbm_predict_what_if(store, family)
             scenario_df = lgbm_predict_what_if(
                 store, family,
-                onpromotion_override=1.0 if discount > 0 else None,
+                onpromotion_override=(1 + discount / 25) if discount > 0 else None,
                 oil_override=float(oil),
                 holiday_override=holiday if holiday else None,
             )
