@@ -145,7 +145,7 @@ st.divider()
 
 # Forecast chart
 st.subheader("Forecast with Confidence Interval — 95% CI")
-st.plotly_chart(make_forecast_chart(history, forecast), width="stretch")
+st.plotly_chart(make_forecast_chart(history, forecast), use_container_width=True)
 
 st.divider()
 
@@ -154,8 +154,8 @@ col_left, col_right = st.columns(2)
 
 with col_left:
     st.subheader("Store Breakdown")
-    st.dataframe(pd.DataFrame(breakdown), width="stretch", hide_index=True)
+    st.dataframe(pd.DataFrame(breakdown), use_container_width=True, hide_index=True)
 
 with col_right:
     st.subheader("SHAP — Feature Contributions")
-    st.plotly_chart(make_shap_chart(shap_data), width="stretch")
+    st.plotly_chart(make_shap_chart(shap_data), use_container_width=True)
