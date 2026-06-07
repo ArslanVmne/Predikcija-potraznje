@@ -142,16 +142,18 @@ shap_data = [
     for f in shap_features
 ]
 
-# Store breakdown
+# Store breakdown — use actual model forecast per store, fall back to mean_daily if unavailable
 params = load_inventory_params()
 store_params = params[params["family"] == family].sort_values("store_nbr")
 breakdown = []
 for _, row in store_params.iterrows():
-    fc_val = int(row["mean_daily"] * 15)
+    s = int(row["store_nbr"])
+    fc = get_forecast(s, family)
+    fc_val = int(fc["yhat"].sum()) if not fc.empty else int(row["mean_daily"] * len(forecast))
     stock = int(row["safety_stock"])
     order = max(fc_val - stock, 0)
     status = "🔴 Urgent" if order > fc_val * 0.5 else ("🟡 Planned" if order > 0 else "🟢 OK")
-    breakdown.append({"Store": int(row["store_nbr"]), "Forecast": fc_val, "Stock": stock, "Order qty": order, "Status": status})
+    breakdown.append({"Store": s, "Forecast": fc_val, "Stock": stock, "Order qty": order, "Status": status})
 
 # ── Page ──────────────────────────────────────────────────────────────────────
 st.title(f"Sales Forecast — {family}")
