@@ -4,7 +4,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from src.anomaly import detect_anomalies
-from src.data_loader import get_families, get_stores, load_current_stock, load_inventory_params, load_shap_by_family
+from src.data_loader import get_families, get_stores, load_current_stock, load_inventory_params, load_shap_by_family, load_val_preds
 from src.model_inference import get_forecast, get_history, get_mape
 
 st.set_page_config(page_title="Forecast — ForecastIQ", page_icon="📊", layout="wide")
@@ -228,3 +228,57 @@ with col_right:
         st.info(explanation)
 
     st.plotly_chart(make_shap_chart(shap_data), use_container_width=True)
+
+st.divider()
+
+# ── Model performance — MAPE by family ────────────────────────────────────────
+@st.cache_data
+def get_mape_by_family():
+    val = load_val_preds()
+    val = val.copy()
+    val["ape"] = (val["sales"] - val["ensemble_pred"]).abs() / val["sales"].clip(lower=1) * 100
+    result = val.groupby("family")["ape"].mean().reset_index()
+    result.columns = ["family", "mape"]
+    return result.sort_values("mape")
+
+with st.expander("Model Performance — MAPE by product family"):
+    mape_df = get_mape_by_family()
+    colors = [
+        "#16a34a" if m < 15 else "#f59e0b" if m < 30 else "#ef4444"
+        for m in mape_df["mape"]
+    ]
+    # Highlight selected family
+    marker_sizes = [14 if f == family else 0 for f in mape_df["family"]]
+
+    fig_mape = go.Figure()
+    fig_mape.add_trace(go.Bar(
+        x=mape_df["mape"], y=mape_df["family"],
+        orientation="h",
+        marker_color=colors,
+        text=mape_df["mape"].round(1).astype(str) + "%",
+        textposition="outside",
+    ))
+    # Highlight current family with a vertical marker line
+    current_mape = mape_df[mape_df["family"] == family]["mape"].values
+    if len(current_mape):
+        fig_mape.add_annotation(
+            x=current_mape[0], y=family,
+            text=f"  ← selected",
+            showarrow=False,
+            font=dict(color="#e2e8f0", size=11),
+            xanchor="left",
+        )
+    fig_mape.update_layout(
+        height=max(300, len(mape_df) * 18),
+        margin=dict(t=10, r=80, b=40, l=160),
+        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="#e2e8f0", size=11),
+        xaxis=dict(title="MAPE (%)", gridcolor="#334155"),
+        yaxis=dict(showgrid=False),
+    )
+    st.plotly_chart(fig_mape, use_container_width=True)
+    st.caption(
+        "🟢 < 15% · 🟡 15–30% · 🔴 > 30%  —  "
+        "High-volume staples (BOOKS, GROCERY I, PRODUCE) forecast accurately. "
+        "Low-volume / irregular families (HARDWARE, LINGERIE) have higher error due to sparse demand."
+    )

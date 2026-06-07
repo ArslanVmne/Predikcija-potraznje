@@ -6,6 +6,7 @@ import streamlit as st
 
 from src.data_loader import get_stores
 from src.inventory import build_orders
+from src.pdf_generator import generate_po_pdf
 from src.po_generator import generate_po_excel
 
 st.set_page_config(page_title="Orders — ForecastIQ", page_icon="📋", layout="wide")
@@ -58,6 +59,21 @@ STATUS_EMOJI = {"Critical": "🔴 Critical", "Order Now": "🟡 Order Now",
                 "Monitor": "🔵 Monitor", "OK": "🟢 OK"}
 df_full["Status"] = df_full["Status"].map(STATUS_EMOJI).fillna(df_full["Status"])
 
+# Stockout exposure — computed before status filter on raw orders list
+stockout_exposure = sum(
+    max(o["safety_stock"] - o["current_stock"], 0) * o["unit_price"] * lead_time
+    for o in orders
+    if o["status"] == "Critical"
+)
+stockout_items = [
+    {"Product": o["product"], "Store": o["store"],
+     "Shortfall (units)": int(max(o["safety_stock"] - o["current_stock"], 0)),
+     "Exposure ($)": round(max(o["safety_stock"] - o["current_stock"], 0) * o["unit_price"] * lead_time, 2)}
+    for o in orders
+    if o["status"] == "Critical"
+]
+stockout_items.sort(key=lambda x: x["Exposure ($)"], reverse=True)
+
 if status_filter:
     df_full = df_full[df_full["Status"].isin(status_filter)].reset_index(drop=True)
 
@@ -108,14 +124,22 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ── KPI strip ─────────────────────────────────────────────────────────────────
-k1, k2, k3, k4 = st.columns(4)
+k1, k2, k3, k4, k5 = st.columns(5)
 critical_count = int((df_full["Status"] == "🔴 Critical").sum())
 order_now_count = int((df_full["Status"] == "🟡 Order Now").sum())
 k1.metric("Total Lines", len(df_full))
 k2.metric("Total Value", f"${total_value:,.0f}")
-k3.metric("Critical (below safety stock)", critical_count,
+k3.metric("Critical items", critical_count,
           delta="Immediate action" if critical_count else None, delta_color="inverse")
 k4.metric("Delivery Date", delivery_date.strftime("%b %d"))
+k5.metric("Stockout exposure", f"${stockout_exposure:,.0f}",
+          delta="Cost of not ordering" if stockout_exposure > 0 else "No exposure",
+          delta_color="inverse" if stockout_exposure > 0 else "off",
+          help=f"Shortfall units × unit price × {lead_time} day lead time, critical items only")
+
+if stockout_items:
+    with st.expander(f"Stockout breakdown — top {min(len(stockout_items), 10)} costliest items"):
+        st.dataframe(pd.DataFrame(stockout_items[:10]), use_container_width=True, hide_index=True)
 
 st.divider()
 
@@ -186,7 +210,7 @@ st.divider()
 
 # ── Export ────────────────────────────────────────────────────────────────────
 st.markdown("#### Export")
-col1, col2 = st.columns(2)
+col1, col2, col3 = st.columns(3)
 
 export_df = edited_df.copy()
 
@@ -204,9 +228,24 @@ with col2:
         store_filter=store_filter,
     )
     st.download_button(
-        "⬇ Download Purchase Order (Excel)",
+        "⬇ Download Excel",
         data=po_bytes,
         file_name=f"purchase_order_{today.strftime('%Y%m%d')}.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        use_container_width=True,
+    )
+
+with col3:
+    pdf_bytes = generate_po_pdf(
+        df=export_df,
+        lead_time=lead_time,
+        service_level=service_level,
+        store_filter=store_filter,
+    )
+    st.download_button(
+        "⬇ Download PDF",
+        data=pdf_bytes,
+        file_name=f"purchase_order_{today.strftime('%Y%m%d')}.pdf",
+        mime="application/pdf",
         use_container_width=True,
     )

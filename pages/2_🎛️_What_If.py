@@ -80,7 +80,17 @@ with col_ctrl:
         discount = st.slider("Discount (%)", 0, 50, 15, step=5)
 
         st.markdown("**External factors**")
-        holiday = st.toggle("National holiday", value=False)
+        ECUADOR_HOLIDAYS = {
+            "None": False,
+            "Primer Grito de Independencia (Aug 10)": True,
+            "Batalla de Pichincha (May 24)": True,
+            "Navidad (Dec 25)": True,
+            "Año Nuevo (Jan 1)": True,
+            "Carnaval (Feb 27)": True,
+            "Día de los Difuntos (Nov 2)": True,
+        }
+        holiday_choice = st.selectbox("Ecuador national holiday", list(ECUADOR_HOLIDAYS.keys()))
+        holiday = ECUADOR_HOLIDAYS[holiday_choice]
         oil = st.slider("Oil price ($/barrel)", 30, 100, 49)
 
         run = st.form_submit_button("▶ Run Simulation", type="primary", use_container_width=True)
