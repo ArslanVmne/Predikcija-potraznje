@@ -4,9 +4,10 @@ import streamlit as st
 
 from src.data_loader import get_families, get_stores
 from src.model_inference import lgbm_predict_what_if
+from src.ui import HOVERLABEL, render_sidebar
 
 st.set_page_config(page_title="What-If — ForecastIQ", page_icon="🎛️", layout="wide")
-st.sidebar.markdown("## 📈 ForecastIQ")
+render_sidebar()
 
 
 @st.cache_data
@@ -50,6 +51,7 @@ def make_whatif_chart(baseline, current_scenario, saved_scenarios=None) -> go.Fi
         xaxis=dict(showgrid=False, tickfont=dict(size=12)),
         yaxis=dict(gridcolor="#334155", title="Units sold", tickfont=dict(size=12)),
         legend=dict(orientation="h", y=-0.3, font=dict(size=12)),
+        hoverlabel=HOVERLABEL,
     )
     return fig
 

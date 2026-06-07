@@ -5,9 +5,10 @@ import streamlit as st
 
 from src.data_loader import load_val_preds
 from src.model_inference import get_forecast, lgbm_predict_what_if
+from src.ui import HOVERLABEL, render_sidebar
 
 st.set_page_config(page_title="Upload — ForecastIQ", page_icon="📤", layout="wide")
-st.sidebar.markdown("## 📈 ForecastIQ")
+render_sidebar()
 
 REQUIRED_COLS = {"date", "store_nbr", "family", "sales", "onpromotion"}
 COL_ALIASES = {
@@ -22,6 +23,7 @@ CHART_LAYOUT = dict(
     plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
     font=dict(color="#e2e8f0", size=12),
     margin=dict(t=20, r=20, b=40, l=60),
+    hoverlabel=HOVERLABEL,
 )
 
 

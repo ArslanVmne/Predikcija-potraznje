@@ -1,6 +1,7 @@
 import streamlit as st
 
 from src.data_loader import get_stores, load_current_stock, load_inventory_params, load_val_preds
+from src.ui import render_sidebar
 
 st.set_page_config(
     page_title="ForecastIQ",
@@ -9,8 +10,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-st.sidebar.markdown("## 📈 ForecastIQ")
-st.sidebar.caption("Store Sales Forecasting & Inventory Optimization")
+render_sidebar()
 
 
 @st.cache_data

@@ -6,11 +6,12 @@ import streamlit as st
 
 from src.data_loader import get_stores
 from src.inventory import build_orders
+from src.ui import render_sidebar
 from src.pdf_generator import generate_po_pdf
 from src.po_generator import generate_po_excel
 
 st.set_page_config(page_title="Orders — ForecastIQ", page_icon="📋", layout="wide")
-st.sidebar.markdown("## 📈 ForecastIQ")
+render_sidebar()
 
 
 @st.cache_data

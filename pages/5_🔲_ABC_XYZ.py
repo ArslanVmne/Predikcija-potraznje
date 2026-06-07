@@ -5,13 +5,15 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from src.data_loader import load_inventory_params
+from src.ui import HOVERLABEL, render_sidebar
 
 st.set_page_config(page_title="ABC-XYZ — ForecastIQ", page_icon="🔲", layout="wide")
-st.sidebar.markdown("## 📈 ForecastIQ")
+render_sidebar()
 
 CHART_LAYOUT = dict(
     plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
     font=dict(color="#e2e8f0", size=13),
+    hoverlabel=HOVERLABEL,
 )
 
 # XYZ thresholds

@@ -6,9 +6,10 @@ import streamlit as st
 from src.anomaly import detect_anomalies
 from src.data_loader import get_families, get_stores, load_current_stock, load_inventory_params, load_shap_by_family, load_val_preds
 from src.model_inference import get_forecast, get_history, get_mape
+from src.ui import HOVERLABEL, render_sidebar
 
 st.set_page_config(page_title="Forecast — ForecastIQ", page_icon="📊", layout="wide")
-st.sidebar.markdown("## 📈 ForecastIQ")
+render_sidebar()
 
 SHAP_LABELS = {
     "roll_mean_7": "7-day rolling avg",
@@ -77,6 +78,7 @@ def make_forecast_chart(history: pd.DataFrame, forecast: pd.DataFrame, anomalies
         xaxis=dict(showgrid=False, tickfont=dict(size=12)),
         yaxis=dict(gridcolor="#334155", title="Units sold", tickfont=dict(size=12)),
         legend=dict(orientation="h", y=-0.3, font=dict(size=12)),
+        hoverlabel=HOVERLABEL,
     )
     return fig
 
@@ -99,6 +101,7 @@ def make_shap_chart(shap_data: list) -> go.Figure:
         font=dict(color="#e2e8f0", size=13),
         xaxis=dict(title="SHAP contribution", gridcolor="#334155", tickfont=dict(size=12)),
         yaxis=dict(showgrid=False, tickfont=dict(size=13)),
+        hoverlabel=HOVERLABEL,
     )
     return fig
 
@@ -123,6 +126,14 @@ with st.sidebar:
 # ── Load data ─────────────────────────────────────────────────────────────────
 history = get_history(store, family, days=90)
 forecast = get_forecast(store, family)
+
+if history.empty and forecast.empty:
+    st.info(
+        f"No data available for **{family}** in **Store {store}**. "
+        "Try selecting a different store or product family."
+    )
+    st.stop()
+
 anomalies = detect_anomalies(history)
 mape = get_mape(store, family)
 
@@ -275,6 +286,7 @@ with st.expander("Model Performance — MAPE by product family"):
         font=dict(color="#e2e8f0", size=11),
         xaxis=dict(title="MAPE (%)", gridcolor="#334155"),
         yaxis=dict(showgrid=False),
+        hoverlabel=HOVERLABEL,
     )
     st.plotly_chart(fig_mape, use_container_width=True)
     st.caption(
