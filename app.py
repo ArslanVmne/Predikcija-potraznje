@@ -1,5 +1,7 @@
 import streamlit as st
 
+from src.data_loader import get_stores, load_current_stock, load_inventory_params, load_val_preds
+
 st.set_page_config(
     page_title="ForecastIQ",
     page_icon="📈",
@@ -10,9 +12,43 @@ st.set_page_config(
 st.sidebar.markdown("## 📈 ForecastIQ")
 st.sidebar.caption("Store Sales Forecasting & Inventory Optimization")
 
+
+@st.cache_data
+def get_live_kpis():
+    inv = load_inventory_params()
+    stock = load_current_stock()
+    val = load_val_preds()
+    stores = get_stores()
+
+    merged = inv.merge(stock, on=["store_nbr", "family"], how="left")
+    merged["current_stock"] = merged["current_stock"].fillna(0)
+    critical_skus = int(((merged["current_stock"] < merged["safety_stock"]) & (merged["ABC"] == "A")).sum())
+
+    forecast_total = int(val["ensemble_pred"].sum())
+
+    return {
+        "critical_skus": critical_skus,
+        "forecast_total": forecast_total,
+        "stores": len(stores),
+        "families": int(inv["family"].nunique()),
+    }
+
+
+kpis = get_live_kpis()
+
 st.title("ForecastIQ")
 st.subheader("Demand Forecasting & Inventory Optimization System")
 st.caption("Built on the Favorita Grocery Sales dataset — 54 stores, 33 product families, 4 years of daily sales data")
+
+st.divider()
+
+k1, k2, k3, k4 = st.columns(4)
+k1.metric("Stores monitored", kpis["stores"])
+k2.metric("Product families", kpis["families"])
+k3.metric("15-day forecast total", f"{kpis['forecast_total']:,} units")
+k4.metric("A-class SKUs below safety stock", kpis["critical_skus"],
+          delta="Immediate action needed" if kpis["critical_skus"] > 0 else "All stocked",
+          delta_color="inverse" if kpis["critical_skus"] > 0 else "off")
 
 st.divider()
 

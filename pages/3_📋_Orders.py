@@ -30,8 +30,8 @@ with st.sidebar:
     st.markdown("**Filter lines**")
     status_filter = st.multiselect(
         "Show status",
-        ["Critical", "Order Now", "Monitor", "OK"],
-        default=["Critical", "Order Now", "Monitor", "OK"],
+        ["🔴 Critical", "🟡 Order Now", "🔵 Monitor", "🟢 OK"],
+        default=["🔴 Critical", "🟡 Order Now", "🔵 Monitor", "🟢 OK"],
     )
 
 store_num = None if store_filter == "All" else int(store_filter.split()[-1])
@@ -53,6 +53,10 @@ df_full.columns = [
     "Product", "Store", "ABC", "Current Stock", "Safety Stock", "ROP",
     "Forecasted Demand", "Order Qty", "Unit Price ($)", "Total ($)", "Status"
 ]
+
+STATUS_EMOJI = {"Critical": "🔴 Critical", "Order Now": "🟡 Order Now",
+                "Monitor": "🔵 Monitor", "OK": "🟢 OK"}
+df_full["Status"] = df_full["Status"].map(STATUS_EMOJI).fillna(df_full["Status"])
 
 if status_filter:
     df_full = df_full[df_full["Status"].isin(status_filter)].reset_index(drop=True)
@@ -105,8 +109,8 @@ st.markdown(f"""
 
 # ── KPI strip ─────────────────────────────────────────────────────────────────
 k1, k2, k3, k4 = st.columns(4)
-critical_count = int((df_full["Status"] == "Critical").sum())
-order_now_count = int((df_full["Status"] == "Order Now").sum())
+critical_count = int((df_full["Status"] == "🔴 Critical").sum())
+order_now_count = int((df_full["Status"] == "🟡 Order Now").sum())
 k1.metric("Total Lines", len(df_full))
 k2.metric("Total Value", f"${total_value:,.0f}")
 k3.metric("Critical (below safety stock)", critical_count,
@@ -151,8 +155,8 @@ edited_df["Total ($)"] = (edited_df["Order Qty"] * edited_df["Unit Price ($)"]).
 # ── Order summary footer ───────────────────────────────────────────────────────
 adj_total = edited_df["Total ($)"].sum()
 ml_total = int(edited_df["Forecasted Demand"].sum())
-adj_critical = int((edited_df["Status"] == "Critical").sum())
-adj_order_now = int((edited_df["Status"] == "Order Now").sum())
+adj_critical = int((edited_df["Status"] == "🔴 Critical").sum())
+adj_order_now = int((edited_df["Status"] == "🟡 Order Now").sum())
 
 st.markdown(f"""
 <div style="

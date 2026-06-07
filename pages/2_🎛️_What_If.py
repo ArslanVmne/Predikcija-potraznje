@@ -19,20 +19,31 @@ def cached_stores():
     return get_stores()
 
 
-def make_whatif_chart(baseline, scenario) -> go.Figure:
+SCENARIO_COLORS = ["#2563eb", "#16a34a", "#f59e0b"]
+
+
+def make_whatif_chart(baseline, current_scenario, saved_scenarios=None) -> go.Figure:
     fig = go.Figure()
     fig.add_trace(go.Scatter(
         x=[d["date"] for d in baseline], y=[d["sales"] for d in baseline],
         name="Baseline", mode="lines",
         line=dict(color="#94a3b8", width=2, dash="dash"),
     ))
+    # Saved scenarios
+    for i, sc in enumerate(saved_scenarios or []):
+        fig.add_trace(go.Scatter(
+            x=[d["date"] for d in sc["records"]], y=[d["sales"] for d in sc["records"]],
+            name=sc["label"], mode="lines",
+            line=dict(color=SCENARIO_COLORS[i % len(SCENARIO_COLORS)], width=2, dash="dot"),
+        ))
+    # Current (active) scenario
     fig.add_trace(go.Scatter(
-        x=[d["date"] for d in scenario], y=[d["sales"] for d in scenario],
-        name="Scenario", mode="lines",
-        line=dict(color="#2563eb", width=2),
+        x=[d["date"] for d in current_scenario], y=[d["sales"] for d in current_scenario],
+        name="Current scenario", mode="lines",
+        line=dict(color="#e2e8f0", width=2),
     ))
     fig.update_layout(
-        height=280,
+        height=300,
         margin=dict(t=20, r=20, b=50, l=60),
         plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
         font=dict(color="#e2e8f0", size=13),
@@ -42,6 +53,10 @@ def make_whatif_chart(baseline, scenario) -> go.Figure:
     )
     return fig
 
+
+# ── Session state ─────────────────────────────────────────────────────────────
+if "saved_scenarios" not in st.session_state:
+    st.session_state["saved_scenarios"] = []
 
 # ── Controls (inside a form so sliders don't trigger reruns) ──────────────────
 families = cached_families()
@@ -70,6 +85,15 @@ with col_ctrl:
 
         run = st.form_submit_button("▶ Run Simulation", type="primary", use_container_width=True)
 
+    saved = st.session_state["saved_scenarios"]
+    can_save = "whatif_result" in st.session_state and len(saved) < 3
+    save_col, clear_col = st.columns(2)
+    save = save_col.button("💾 Save Scenario", disabled=not can_save, use_container_width=True,
+                           help="Save current scenario for comparison (max 3)")
+    if clear_col.button("🗑 Clear saved", disabled=len(saved) == 0, use_container_width=True):
+        st.session_state["saved_scenarios"] = []
+        st.rerun()
+
 # ── Simulation ────────────────────────────────────────────────────────────────
 with col_main:
     st.title("What-If Simulator")
@@ -85,7 +109,7 @@ with col_main:
         baseline_df = lgbm_predict_what_if(default_store, default_family)
         scenario_df = baseline_df.copy()
         st.session_state["whatif_result"] = (baseline_df, scenario_df)
-        st.session_state["whatif_params"] = (6_000, 14, 0)
+        st.session_state["whatif_params"] = (6_000, 14, 0, default_family, default_store)
 
     if run:
         with st.spinner("Running LGBM inference..."):
@@ -97,10 +121,23 @@ with col_main:
                 holiday_override=holiday if holiday else None,
             )
         st.session_state["whatif_result"] = (baseline_df, scenario_df)
-        st.session_state["whatif_params"] = (budget, duration, discount)
+        st.session_state["whatif_params"] = (budget, duration, discount, family, store)
 
     baseline_df, scenario_df = st.session_state["whatif_result"]
-    budget_s, duration_s, discount_s = st.session_state["whatif_params"]
+    budget_s, duration_s, discount_s, family_s, store_s = st.session_state.get(
+        "whatif_params", (6_000, 14, 0, family, store)
+    )
+
+    # Handle Save Scenario
+    if save:
+        n = len(st.session_state["saved_scenarios"]) + 1
+        label = f"S{n}: {family_s}/Store {store_s} ({discount_s}% off, oil ${oil})"
+        st.session_state["saved_scenarios"].append({
+            "label": label,
+            "records": scenario_df.to_dict(orient="records"),
+            "delta_units": int(scenario_df["sales"].sum() - baseline_df["sales"].sum()),
+        })
+        st.rerun()
 
     st.caption(f"{family}  ·  Store {store}" if run else "Adjust parameters and click **▶ Run Simulation**")
 
@@ -126,7 +163,19 @@ with col_main:
     st.subheader("Baseline vs Scenario")
     baseline_records = baseline_df.to_dict(orient="records")
     scenario_records = scenario_df.to_dict(orient="records")
-    st.plotly_chart(make_whatif_chart(baseline_records, scenario_records), use_container_width=True)
+    st.plotly_chart(
+        make_whatif_chart(baseline_records, scenario_records, st.session_state["saved_scenarios"]),
+        use_container_width=True,
+    )
+
+    # Saved scenarios comparison table
+    if st.session_state["saved_scenarios"]:
+        st.markdown("**Saved scenarios**")
+        saved_rows = [
+            {"Scenario": sc["label"], "Sales delta (units)": f"{sc['delta_units']:+,}"}
+            for sc in st.session_state["saved_scenarios"]
+        ]
+        st.dataframe(saved_rows, use_container_width=True, hide_index=True)
 
     st.divider()
 

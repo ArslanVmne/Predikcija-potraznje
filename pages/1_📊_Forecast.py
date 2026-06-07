@@ -4,7 +4,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from src.anomaly import detect_anomalies
-from src.data_loader import get_families, get_stores, load_inventory_params, load_shap_by_family
+from src.data_loader import get_families, get_stores, load_current_stock, load_inventory_params, load_shap_by_family
 from src.model_inference import get_forecast, get_history, get_mape
 
 st.set_page_config(page_title="Forecast — ForecastIQ", page_icon="📊", layout="wide")
@@ -154,6 +154,23 @@ for _, row in store_params.iterrows():
     order = max(fc_val - stock, 0)
     status = "🔴 Urgent" if order > fc_val * 0.5 else ("🟡 Planned" if order > 0 else "🟢 OK")
     breakdown.append({"Store": s, "Forecast": fc_val, "Stock": stock, "Order qty": order, "Status": status})
+
+# ── Cross-page alert: critical stock for this store ───────────────────────────
+@st.cache_data
+def get_critical_count(store_nbr: int) -> int:
+    inv = load_inventory_params()
+    stock = load_current_stock()
+    merged = inv[inv["store_nbr"] == store_nbr].merge(stock, on=["store_nbr", "family"], how="left")
+    merged["current_stock"] = merged["current_stock"].fillna(0)
+    return int(((merged["current_stock"] < merged["safety_stock"]) & (merged["ABC"] == "A")).sum())
+
+critical_count = get_critical_count(store)
+if critical_count > 0:
+    col_alert, col_link = st.columns([5, 1])
+    with col_alert:
+        st.warning(f"⚠️ {critical_count} A-class product{'s' if critical_count > 1 else ''} in Store {store} {'are' if critical_count > 1 else 'is'} below safety stock.")
+    with col_link:
+        st.page_link("pages/3_📋_Orders.py", label="Go to Orders →", icon="📋")
 
 # ── Page ──────────────────────────────────────────────────────────────────────
 st.title(f"Sales Forecast — {family}")
