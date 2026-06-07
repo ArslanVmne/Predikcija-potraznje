@@ -136,46 +136,67 @@ elif step == 2:
     st.subheader("Column Mapping")
     st.success(f"✓ **{meta['filename']}** — {len(df):,} rows, {len(df.columns)} columns")
 
-    col_map, col_prev = st.columns([1, 1])
+    # Detect if user uploaded the external factors file by mistake
+    cols_lower = {c.lower() for c in df.columns}
+    is_external_factors = "oil_price" in cols_lower or (
+        len(missing) >= 4 and not {"sales", "family"} & cols_lower
+    )
 
-    with col_map:
-        if mapping:
-            map_df = pd.DataFrame(
-                [(k, "→", v) for k, v in mapping.items()],
-                columns=["Your column", "", "System column"],
-            )
-            st.dataframe(map_df, use_container_width=True, hide_index=True)
-
-        if missing:
-            st.warning(f"Could not auto-map: **{', '.join(missing)}**")
-            for col in missing:
-                choice = st.selectbox(
-                    f"Map '{col}' to:",
-                    ["(skip)"] + df.columns.tolist(),
-                    key=f"manual_{col}",
-                )
-                if choice != "(skip)":
-                    mapping[choice] = col
-        else:
-            st.success("All required columns mapped automatically.")
-
-    with col_prev:
-        st.markdown("**Preview (5 rows)**")
-        st.dataframe(df.head(5), use_container_width=True, hide_index=True)
-
-    st.session_state.upload_meta["mapping"] = mapping
-    mapped_targets = set(mapping.values())
-    missing = REQUIRED_COLS - mapped_targets
-
-    c1, c2 = st.columns([1, 5])
-    with c1:
-        if st.button("← Back"):
+    if is_external_factors:
+        st.warning(
+            "**This looks like an external factors file** (oil prices, holidays, transactions).  \n"
+            "The forecasting pipeline requires a **sales file** with columns:  \n"
+            "`date · store_nbr · family · sales · onpromotion`  \n\n"
+            "Please upload **demo_sales.csv** instead to see the full pipeline."
+        )
+        st.markdown("**File preview:**")
+        st.dataframe(df.head(8), use_container_width=True, hide_index=True)
+        if st.button("← Start over", type="primary"):
             st.session_state.upload_step = 1
+            st.session_state.upload_df = None
+            st.session_state.upload_meta = {}
             st.rerun()
-    with c2:
-        if st.button("Continue →", type="primary", disabled=bool(missing)):
-            st.session_state.upload_step = 3
-            st.rerun()
+    else:
+        col_map, col_prev = st.columns([1, 1])
+
+        with col_map:
+            if mapping:
+                map_df = pd.DataFrame(
+                    [(k, "→", v) for k, v in mapping.items()],
+                    columns=["Your column", "", "System column"],
+                )
+                st.dataframe(map_df, use_container_width=True, hide_index=True)
+
+            if missing:
+                st.warning(f"Could not auto-map: **{', '.join(missing)}**")
+                for col in missing:
+                    choice = st.selectbox(
+                        f"Map '{col}' to:",
+                        ["(skip)"] + df.columns.tolist(),
+                        key=f"manual_{col}",
+                    )
+                    if choice != "(skip)":
+                        mapping[choice] = col
+            else:
+                st.success("All required columns mapped automatically.")
+
+        with col_prev:
+            st.markdown("**Preview (5 rows)**")
+            st.dataframe(df.head(5), use_container_width=True, hide_index=True)
+
+        st.session_state.upload_meta["mapping"] = mapping
+        mapped_targets = set(mapping.values())
+        missing = REQUIRED_COLS - mapped_targets
+
+        c1, c2 = st.columns([1, 5])
+        with c1:
+            if st.button("← Back"):
+                st.session_state.upload_step = 1
+                st.rerun()
+        with c2:
+            if st.button("Continue →", type="primary", disabled=bool(missing)):
+                st.session_state.upload_step = 3
+                st.rerun()
 
 # ── Step 3 — Explore ──────────────────────────────────────────────────────────
 elif step == 3:
