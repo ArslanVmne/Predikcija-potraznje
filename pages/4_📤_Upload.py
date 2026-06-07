@@ -113,16 +113,6 @@ if step == 1:
                 help="Jan–Jul 2017 · Stores 1, 3, 5 · 33 families · 20,988 rows",
             )
 
-        with open("data/demo_external_factors.csv", "rb") as f:
-            st.download_button(
-                "⬇ demo_external_factors.csv",
-                data=f.read(),
-                file_name="demo_external_factors.csv",
-                mime="text/csv",
-                use_container_width=True,
-                help="Oil price, holidays, transactions · 212 rows",
-            )
-
         st.caption("Download → inspect → re-upload to see the full pipeline.")
 
 # ── Step 2 — Column Mapping ───────────────────────────────────────────────────
