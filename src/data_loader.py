@@ -50,17 +50,17 @@ def load_current_stock() -> pd.DataFrame:
 
 
 @lru_cache(maxsize=1)
+def _load_lgbm_pkg() -> dict:
+    with open(MODELS / "lgbm_prophet.pkl", "rb") as f:
+        return pickle.load(f)
+
+
 def load_lgbm():
-    with open(MODELS / "lgbm_prophet.pkl", "rb") as f:
-        pkg = pickle.load(f)
-    return pkg["model"]
+    return _load_lgbm_pkg()["model"]
 
 
-@lru_cache(maxsize=1)
 def load_lgbm_features() -> list[str]:
-    with open(MODELS / "lgbm_prophet.pkl", "rb") as f:
-        pkg = pickle.load(f)
-    return pkg["features"]
+    return _load_lgbm_pkg()["features"]
 
 
 @lru_cache(maxsize=1)

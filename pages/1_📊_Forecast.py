@@ -4,7 +4,8 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from src.anomaly import detect_anomalies
-from src.data_loader import get_families, get_stores, load_current_stock, load_inventory_params, load_shap_by_family, load_val_preds
+from src.data_loader import get_families, get_stores, load_inventory_params, load_shap_by_family, load_val_preds
+from src.inventory import get_critical_a_count
 from src.model_inference import get_forecast, get_history, get_mape
 from src.ui import HOVERLABEL, render_sidebar
 
@@ -33,6 +34,21 @@ def cached_families():
 @st.cache_data
 def cached_stores():
     return get_stores()
+
+
+@st.cache_data
+def cached_forecast(store: int, family: str) -> pd.DataFrame:
+    return get_forecast(store, family)
+
+
+@st.cache_data
+def cached_history(store: int, family: str) -> pd.DataFrame:
+    return get_history(store, family, days=90)
+
+
+@st.cache_data
+def cached_anomalies(store: int, family: str) -> pd.DataFrame:
+    return detect_anomalies(cached_history(store, family))
 
 
 def make_forecast_chart(history: pd.DataFrame, forecast: pd.DataFrame, anomalies: pd.DataFrame) -> go.Figure:
@@ -124,8 +140,8 @@ with st.sidebar:
     store = st.selectbox("Store", store_options, index=0)
 
 # ── Load data ─────────────────────────────────────────────────────────────────
-history = get_history(store, family, days=90)
-forecast = get_forecast(store, family)
+history = cached_history(store, family)
+forecast = cached_forecast(store, family)
 
 if history.empty and forecast.empty:
     st.info(
@@ -134,7 +150,7 @@ if history.empty and forecast.empty:
     )
     st.stop()
 
-anomalies = detect_anomalies(history)
+anomalies = cached_anomalies(store, family)
 mape = get_mape(store, family)
 
 forecast_total = int(forecast["yhat"].sum()) if not forecast.empty else 0
@@ -154,28 +170,30 @@ shap_data = [
 ]
 
 # Store breakdown — use actual model forecast per store, fall back to mean_daily if unavailable
-params = load_inventory_params()
-store_params = params[params["family"] == family].sort_values("store_nbr")
-breakdown = []
-for _, row in store_params.iterrows():
-    s = int(row["store_nbr"])
-    fc = get_forecast(s, family)
-    fc_val = int(fc["yhat"].sum()) if not fc.empty else int(row["mean_daily"] * len(forecast))
-    stock = int(row["safety_stock"])
-    order = max(fc_val - stock, 0)
-    status = "🔴 Urgent" if order > fc_val * 0.5 else ("🟡 Planned" if order > 0 else "🟢 OK")
-    breakdown.append({"Store": s, "Forecast": fc_val, "Stock": stock, "Order qty": order, "Status": status})
+@st.cache_data
+def cached_store_breakdown(family: str) -> list[dict]:
+    params = load_inventory_params()
+    store_params = params[params["family"] == family].sort_values("store_nbr")
+    rows = []
+    for _, row in store_params.iterrows():
+        s = int(row["store_nbr"])
+        fc = get_forecast(s, family)
+        fc_val = int(fc["yhat"].sum()) if not fc.empty else int(row["mean_daily"] * 15)
+        stock = int(row["safety_stock"])
+        order = max(fc_val - stock, 0)
+        status = "🔴 Urgent" if order > fc_val * 0.5 else ("🟡 Planned" if order > 0 else "🟢 OK")
+        rows.append({"Store": s, "Forecast": fc_val, "Stock": stock, "Order qty": order, "Status": status})
+    return rows
+
+with st.spinner("Computing store breakdown..."):
+    breakdown = cached_store_breakdown(family)
 
 # ── Cross-page alert: critical stock for this store ───────────────────────────
 @st.cache_data
-def get_critical_count(store_nbr: int) -> int:
-    inv = load_inventory_params()
-    stock = load_current_stock()
-    merged = inv[inv["store_nbr"] == store_nbr].merge(stock, on=["store_nbr", "family"], how="left")
-    merged["current_stock"] = merged["current_stock"].fillna(0)
-    return int(((merged["current_stock"] < merged["safety_stock"]) & (merged["ABC"] == "A")).sum())
+def cached_critical_count(store_nbr: int) -> int:
+    return get_critical_a_count(store_nbr)
 
-critical_count = get_critical_count(store)
+critical_count = cached_critical_count(store)
 if critical_count > 0:
     col_alert, col_link = st.columns([5, 1])
     with col_alert:
@@ -269,15 +287,16 @@ with st.expander("Model Performance — MAPE by product family"):
         text=mape_df["mape"].round(1).astype(str) + "%",
         textposition="outside",
     ))
-    # Highlight current family with a vertical marker line
+    # Highlight current family with a vertical dashed line
     current_mape = mape_df[mape_df["family"] == family]["mape"].values
     if len(current_mape):
-        fig_mape.add_annotation(
-            x=current_mape[0], y=family,
-            text=f"  ← selected",
-            showarrow=False,
-            font=dict(color="#e2e8f0", size=11),
-            xanchor="left",
+        fig_mape.add_vline(
+            x=current_mape[0],
+            line_dash="dash", line_color="#e2e8f0", line_width=1,
+            annotation_text=f" {family}",
+            annotation_position="top right",
+            annotation_font_color="#e2e8f0",
+            annotation_font_size=10,
         )
     fig_mape.update_layout(
         height=max(300, len(mape_df) * 18),

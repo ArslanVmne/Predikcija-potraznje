@@ -27,7 +27,8 @@ Uses a hybrid ML pipeline (LightGBM + Prophet + LSTM) on the Kaggle [Store Sales
 | SHAP explanations | Feature-level explanations for each prediction |
 | Inventory optimization | EOQ + safety stock calculation with configurable lead time and service level |
 | What-If simulator | Scenario analysis — change promotions, oil price, or holidays and see the forecast impact |
-| Purchase orders | Auto-generated order quantities, exportable as CSV or Excel |
+| Purchase orders | Auto-generated order quantities with stockout cost estimator, exportable as CSV, Excel, or PDF |
+| ABC-XYZ matrix | Inventory risk segmentation by value tier (ABC) and demand variability (XYZ) |
 | Data upload | Upload custom sales CSV and map columns to the system schema |
 
 ---
@@ -75,17 +76,21 @@ Ensemble improves **35.2%** over the naive baseline.
 ## Project Structure
 
 ```
-├── app.py                  About / landing page
+├── app.py                  Landing page with live KPIs
 ├── pages/
-│   ├── 1_📊_Forecast.py    Forecast + anomaly detection + SHAP
-│   ├── 2_🎛️_What_If.py    Scenario simulator
-│   ├── 3_📋_Orders.py      Purchase order generator
-│   └── 4_📤_Upload.py      CSV upload & column mapping
+│   ├── 1_📊_Forecast.py    Forecast + anomaly detection + SHAP + MAPE by family
+│   ├── 2_🎛️_What_If.py    Scenario simulator with multi-scenario comparison
+│   ├── 3_📋_Orders.py      Purchase order generator with stockout cost estimator
+│   ├── 4_📤_Upload.py      CSV upload & column mapping
+│   └── 5_🔲_ABC_XYZ.py    ABC-XYZ inventory risk matrix
 ├── src/
 │   ├── data_loader.py      Cached data loading functions
 │   ├── model_inference.py  Forecast, MAPE, What-If inference
 │   ├── anomaly.py          IQR + Isolation Forest anomaly detection
-│   └── inventory.py        EOQ, safety stock, order generation
+│   ├── inventory.py        EOQ, safety stock, order generation
+│   ├── po_generator.py     Excel purchase order export
+│   ├── pdf_generator.py    PDF purchase order export
+│   └── ui.py               Shared sidebar branding and chart styles
 ├── models/                 Pre-trained model artifacts (LFS)
 ├── data/processed/         Processed parquet files (LFS)
 ├── notebooks/              Full ML pipeline (01–08)
@@ -119,3 +124,4 @@ See [requirements.txt](requirements.txt). Key dependencies:
 - `scikit-learn >= 1.3`
 - `plotly >= 5.18`
 - `pandas >= 2.0`
+- `fpdf2 >= 2.7` (PDF export)

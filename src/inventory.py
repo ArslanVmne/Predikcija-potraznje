@@ -70,14 +70,15 @@ def build_orders(
 
         abc = row["ABC"]
         if current_stock < float(row["safety_stock"]):
-            status, status_class = "Critical", "bgr"
+            status = "Critical"
         elif current_stock < rop:
-            status, status_class = "Order Now", "bgy"
+            status = "Order Now"
         elif abc == "A":
-            status, status_class = "Monitor", "bgb"
+            status = "Monitor"
         else:
-            status, status_class = "OK", "bgb"
+            status = "OK"
 
+        # Unit price derived from annual cost/demand ratio, scaled to realistic retail range
         raw = row["annual_cost"] / max(row["annual_demand"], 1)
         unit_price = round(max(raw * 500, 0.50), 2)
         orders.append({
@@ -95,9 +96,18 @@ def build_orders(
             "unit_price": round(unit_price, 2),
             "total": round(info["order_qty"] * unit_price, 2),
             "status": status,
-            "status_class": status_class,
             "abc": abc,
         })
 
-    orders.sort(key=lambda x: ({"bgr": 0, "bgy": 1, "bgb": 2}.get(x["status_class"], 3)))
+    _status_order = {"Critical": 0, "Order Now": 1, "Monitor": 2, "OK": 3}
+    orders.sort(key=lambda x: _status_order.get(x["status"], 4))
     return orders
+
+
+def get_critical_a_count(store_nbr: int) -> int:
+    """Count A-class SKUs below safety stock for a given store."""
+    inv = load_inventory_params()
+    stock = load_current_stock()
+    merged = inv[inv["store_nbr"] == store_nbr].merge(stock, on=["store_nbr", "family"], how="left")
+    merged["current_stock"] = merged["current_stock"].fillna(0)
+    return int(((merged["current_stock"] < merged["safety_stock"]) & (merged["ABC"] == "A")).sum())

@@ -6,9 +6,9 @@ import streamlit as st
 
 from src.data_loader import get_stores
 from src.inventory import build_orders
-from src.ui import render_sidebar
 from src.pdf_generator import generate_po_pdf
 from src.po_generator import generate_po_excel
+from src.ui import STATUS_EMOJI, render_sidebar
 
 st.set_page_config(page_title="Orders — ForecastIQ", page_icon="📋", layout="wide")
 render_sidebar()
@@ -56,8 +56,6 @@ df_full.columns = [
     "Forecasted Demand", "Order Qty", "Unit Price ($)", "Total ($)", "Status"
 ]
 
-STATUS_EMOJI = {"Critical": "🔴 Critical", "Order Now": "🟡 Order Now",
-                "Monitor": "🔵 Monitor", "OK": "🟢 OK"}
 df_full["Status"] = df_full["Status"].map(STATUS_EMOJI).fillna(df_full["Status"])
 
 # Stockout exposure — computed before status filter on raw orders list
@@ -139,7 +137,11 @@ k5.metric("Stockout exposure", f"${stockout_exposure:,.0f}",
           help=f"Shortfall units × unit price × {lead_time} day lead time, critical items only")
 
 if stockout_items:
-    with st.expander(f"Stockout breakdown — top {min(len(stockout_items), 10)} costliest items"):
+    _total = len(stockout_items)
+    _label = f"Stockout breakdown — {_total} critical item{'s' if _total != 1 else ''}" + (
+        " (showing top 10)" if _total > 10 else ""
+    )
+    with st.expander(_label):
         st.dataframe(pd.DataFrame(stockout_items[:10]), use_container_width=True, hide_index=True)
 
 st.divider()

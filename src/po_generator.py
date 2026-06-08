@@ -24,8 +24,8 @@ def generate_po_excel(
 ) -> bytes:
     """
     Generate a formatted purchase order Excel file.
-    df must have columns: Product, Store, ABC, ML Forecast (units),
-    System Suggested, My Qty, Unit Price ($), Total ($), Status
+    df must have columns: Product, Store, ABC, Forecasted Demand,
+    Order Qty, Unit Price ($), Total ($), Status
     """
     wb = Workbook()
     ws = wb.active

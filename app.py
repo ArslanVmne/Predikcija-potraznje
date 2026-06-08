@@ -34,7 +34,8 @@ def get_live_kpis():
     }
 
 
-kpis = get_live_kpis()
+with st.spinner("Loading live data..."):
+    kpis = get_live_kpis()
 
 st.title("ForecastIQ")
 st.subheader("Demand Forecasting & Inventory Optimization System")

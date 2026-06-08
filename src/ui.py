@@ -2,6 +2,18 @@ import streamlit as st
 
 HOVERLABEL = dict(bgcolor="#1e293b", font_color="#e2e8f0", bordercolor="#334155")
 
+STATUS_EMOJI = {
+    "Critical":  "🔴 Critical",
+    "Order Now": "🟡 Order Now",
+    "Monitor":   "🔵 Monitor",
+    "OK":        "🟢 OK",
+}
+
+
+def strip_status_emoji(s: str) -> str:
+    """Remove leading emoji + space from a status string for plain-text export."""
+    return s.split(" ", 1)[-1] if s and s[0] in "🔴🟡🔵🟢" else s
+
 
 def render_sidebar():
     st.sidebar.markdown("""

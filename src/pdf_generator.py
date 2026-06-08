@@ -4,6 +4,8 @@ from datetime import date
 import pandas as pd
 from fpdf import FPDF
 
+from src.ui import strip_status_emoji
+
 
 class _PO(FPDF):
     def __init__(self, po_number, today, lead_time, service_level, store_filter):
@@ -115,7 +117,7 @@ def generate_po_pdf(
             str(int(row["Order Qty"])),
             f"${row['Unit Price ($)']:.2f}",
             f"${row['Total ($)']:.2f}",
-            str(row["Status"]).replace("🔴 ", "").replace("🟡 ", "").replace("🔵 ", "").replace("🟢 ", ""),
+            strip_status_emoji(str(row["Status"])),
         ]
         for (_, width, align), val in zip(_COLS, values):
             pdf.cell(width, 6, val, border="B", align=align, fill=True)
