@@ -35,6 +35,8 @@ with st.sidebar:
         ["🔴 Critical", "🟡 Order Now", "🔵 Monitor", "🟢 OK"],
         default=["🔴 Critical", "🟡 Order Now", "🔵 Monitor", "🟢 OK"],
     )
+    show_zero_qty = st.checkbox("Include zero-quantity lines", value=False,
+                                help="Lines where Order Qty = 0 mean stock is sufficient — hide them to keep the PO clean")
 
 store_num = None if store_filter == "All" else int(store_filter.split()[-1])
 
@@ -75,6 +77,9 @@ stockout_items.sort(key=lambda x: x["Exposure ($)"], reverse=True)
 
 if status_filter:
     df_full = df_full[df_full["Status"].isin(status_filter)].reset_index(drop=True)
+
+if not show_zero_qty:
+    df_full = df_full[df_full["Order Qty"] > 0].reset_index(drop=True)
 
 today = date.today()
 po_number = f"PO-{today.strftime('%Y%m%d')}-{abs(hash(store_filter)) % 1000:03d}"
