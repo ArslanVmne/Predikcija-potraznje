@@ -193,4 +193,28 @@ display["CV"] = display["CV"].round(2)
 display["Annual Cost ($)"] = display["Annual Cost ($)"].round(0).astype(int)
 display = display.sort_values(["Class", "Annual Cost ($)"], ascending=[True, False])
 
-st.dataframe(display, use_container_width=True, hide_index=True)
+st.dataframe(
+    display,
+    use_container_width=True,
+    hide_index=True,
+    column_config={
+        "Family": st.column_config.TextColumn(
+            help="Product category name"),
+        "Store": st.column_config.NumberColumn(
+            help="Store number"),
+        "ABC": st.column_config.TextColumn(
+            help="Value tier — A: top 80% of revenue, B: next 15%, C: bottom 5%"),
+        "XYZ": st.column_config.TextColumn(
+            help="Demand stability — X: stable (CV < 0.5), Y: variable (CV 0.5–1.0), Z: unpredictable (CV > 1.0)"),
+        "Class": st.column_config.TextColumn(
+            help="Combined ABC-XYZ classification — e.g. AZ = high value + unpredictable demand"),
+        "Avg Daily Demand": st.column_config.NumberColumn(
+            help="Average units sold per day across the dataset period"),
+        "CV": st.column_config.NumberColumn(
+            help="Demand unpredictability score (Coefficient of Variation = std / mean). "
+                 "Above 1.0 = Z-class (very erratic). Below 0.5 = X-class (stable)."),
+        "Annual Cost ($)": st.column_config.NumberColumn(
+            format="$%d",
+            help="Estimated annual inventory cost based on demand volume and unit price"),
+    },
+)
