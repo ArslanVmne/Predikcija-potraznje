@@ -325,7 +325,7 @@ elif step == 4:
                    "Try uploading demo_sales.csv to see the full pipeline.")
     else:
         # Run inference for all supported combos
-        with st.spinner(f"Running ensemble model on {n_supported} combinations..."):
+        with st.spinner(f"Forecasting {n_supported} store/product combinations..."):
             rows = []
             for _, r in supported.iterrows():
                 fc = get_forecast(int(r["store_nbr"]), r["family"])
@@ -343,7 +343,7 @@ elif step == 4:
 
         # KPIs
         k1, k2, k3 = st.columns(3)
-        k1.metric("Store/family combos forecast", len(fc_df))
+        k1.metric("Store/product combinations", len(fc_df))
         k2.metric("Total forecasted demand", f"{int(fc_df['forecast_15d'].sum()):,} units")
         k3.metric("Avg per combination", f"{int(fc_df['forecast_15d'].mean()):,} units")
 

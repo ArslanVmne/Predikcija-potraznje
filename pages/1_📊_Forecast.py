@@ -13,16 +13,16 @@ st.set_page_config(page_title="Forecast — ForecastIQ", page_icon="📊", layou
 render_sidebar()
 
 SHAP_LABELS = {
-    "roll_mean_7": "7-day rolling avg",
-    "onpromotion": "Promotion",
-    "lag_7": "Sales 7 days ago",
-    "roll_mean_14": "14-day rolling avg",
-    "transactions": "Transactions",
-    "lag_56": "Sales 56 days ago",
-    "prophet_trend": "Prophet trend",
-    "lag_14": "Sales 14 days ago",
-    "dayofmonth": "Day of month",
-    "roll_mean_28": "28-day rolling avg",
+    "roll_mean_7":  "Sales trend — last 7 days",
+    "onpromotion":  "Active promotion",
+    "lag_7":        "Sales last week",
+    "roll_mean_14": "Sales trend — last 2 weeks",
+    "transactions": "Customer footfall",
+    "lag_56":       "Sales 2 months ago",
+    "prophet_trend": "Long-term category trend",
+    "lag_14":       "Sales 2 weeks ago",
+    "dayofmonth":   "Day of the month",
+    "roll_mean_28": "Sales trend — last month",
 }
 
 
@@ -115,7 +115,7 @@ def make_shap_chart(shap_data: list) -> go.Figure:
         margin=dict(t=10, r=20, b=40, l=160),
         plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
         font=dict(color="#e2e8f0", size=13),
-        xaxis=dict(title="SHAP contribution", gridcolor="#334155", tickfont=dict(size=12)),
+        xaxis=dict(title="Impact on forecast", gridcolor="#334155", tickfont=dict(size=12)),
         yaxis=dict(showgrid=False, tickfont=dict(size=13)),
         hoverlabel=HOVERLABEL,
     )
@@ -203,14 +203,17 @@ if critical_count > 0:
 
 # ── Page ──────────────────────────────────────────────────────────────────────
 st.title(f"Sales Forecast — {family}")
-st.caption(f"Store {store}  ·  Validation period: Aug 1–15, 2017  ·  Ensemble model")
+st.caption(f"Store {store}  ·  Forecast period: Aug 1–15, 2017  ·  AI ensemble model")
 
 # KPIs
 n_anomalies = int(anomalies["is_anomaly"].sum())
 
 k1, k2, k3, k4 = st.columns(4)
 k1.metric("15-day Forecast", f"{forecast_total:,} units")
-k2.metric("MAPE", f"{mape}%", delta=f"{'Excellent' if mape < 10 else 'Acceptable'}", delta_color="off")
+k2.metric("Forecast accuracy", f"{mape}% avg error",
+          delta=f"{'Excellent' if mape < 10 else 'Acceptable'}",
+          delta_color="off",
+          help="Average % error vs. actual sales. Under 15% is excellent for retail demand forecasting.")
 k3.metric("Trend vs prior period", f"{'+' if trend_pct >= 0 else ''}{trend_pct}%",
           delta_color="normal" if trend_pct >= 0 else "inverse")
 k4.metric("Anomalies (90d)", n_anomalies, delta="Detected" if n_anomalies > 0 else "None",
@@ -241,19 +244,18 @@ with col_left:
     st.dataframe(pd.DataFrame(breakdown), use_container_width=True, hide_index=True)
 
 with col_right:
-    st.subheader("SHAP — Feature Contributions")
+    st.subheader("What's driving demand?")
 
-    # Auto-generate natural language explanation
     sorted_shap = sorted(shap_data, key=lambda x: x["value"], reverse=True)
     top_pos = [d for d in sorted_shap if d["value"] > 0][:3]
     top_neg = [d for d in sorted_shap if d["value"] < 0][-2:]
 
     if top_pos:
-        drivers = " · ".join(f"**{d['label']}** (+{d['value']:.2f})" for d in top_pos)
-        explanation = f"Demand for **{family}** is driven by: {drivers}"
+        drivers = " · ".join(f"**{d['label']}**" for d in top_pos)
+        explanation = f"Demand for **{family}** is being pushed up by: {drivers}."
         if top_neg:
-            suppressors = " · ".join(f"**{d['label']}** ({d['value']:.2f})" for d in reversed(top_neg))
-            explanation += f"  \nSuppressed by: {suppressors}"
+            suppressors = " · ".join(f"**{d['label']}**" for d in reversed(top_neg))
+            explanation += f"  \nFactors pulling it down: {suppressors}."
         st.info(explanation)
 
     st.plotly_chart(make_shap_chart(shap_data), use_container_width=True)
@@ -270,7 +272,7 @@ def get_mape_by_family():
     result.columns = ["family", "mape"]
     return result.sort_values("mape")
 
-with st.expander("Model Performance — MAPE by product family"):
+with st.expander("Forecast Accuracy by product family"):
     mape_df = get_mape_by_family()
     colors = [
         "#16a34a" if m < 15 else "#f59e0b" if m < 30 else "#ef4444"

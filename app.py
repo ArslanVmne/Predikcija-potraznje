@@ -58,10 +58,10 @@ col1, col2 = st.columns(2)
 with col1:
     st.markdown("### What this app does")
     st.markdown("""
-- **Forecasts daily demand** per product family and store using a hybrid ensemble model (LightGBM + Prophet + LSTM)
-- **Detects demand anomalies** — unexpected spikes or drops using IQR + Isolation Forest
-- **Explains predictions** via SHAP feature contributions
-- **Optimizes inventory** using EOQ and safety stock formulas
+- **Forecasts daily demand** per product family and store using a multi-model AI system
+- **Detects demand anomalies** — automatically flags unexpected spikes or drops in sales
+- **Explains every prediction** in plain English — shows which factors are driving demand up or down
+- **Optimizes inventory** using industry-standard EOQ and safety stock formulas
 - **Simulates scenarios** — what happens if a promotion runs or oil prices change
 - **Generates purchase orders** based on forecast and configurable lead time / service level
     """)
@@ -84,10 +84,10 @@ st.divider()
 st.markdown("### Navigate")
 
 nav_items = [
-    ("pages/1_📊_Forecast.py",  "📊", "Forecast",       "Daily demand · CI · anomaly detection"),
-    ("pages/2_🎛️_What_If.py", "🎛️", "What-If",         "Simulate promotions, holidays & oil"),
-    ("pages/3_📋_Orders.py",    "📋", "Orders",          "ML-based purchase order generator"),
-    ("pages/5_🔲_ABC_XYZ.py",  "🔲", "ABC-XYZ Matrix",  "Inventory risk segmentation"),
+    ("pages/1_📊_Forecast.py",  "📊", "Forecast",       "Daily demand · confidence intervals · anomaly alerts"),
+    ("pages/2_🎛️_What_If.py", "🎛️", "What-If",         "Simulate promotions, holidays & oil prices"),
+    ("pages/3_📋_Orders.py",    "📋", "Orders",          "AI-powered purchase order generator"),
+    ("pages/5_🔲_ABC_XYZ.py",  "🔲", "ABC-XYZ Matrix",  "Inventory risk & priority segmentation"),
     ("pages/4_📤_Upload.py",    "📤", "Upload Data",     "Upload your own sales CSV"),
 ]
 

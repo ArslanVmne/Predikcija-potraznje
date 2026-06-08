@@ -124,7 +124,7 @@ with col_main:
         st.session_state["whatif_params"] = (6_000, 14, 0, default_family, default_store)
 
     if run:
-        with st.spinner("Running LGBM inference..."):
+        with st.spinner("Running simulation..."):
             baseline_df = lgbm_predict_what_if(store, family)
             scenario_df = lgbm_predict_what_if(
                 store, family,

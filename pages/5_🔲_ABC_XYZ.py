@@ -156,7 +156,7 @@ with col_scatter:
         hover_name="family",
         hover_data={"ABC_XYZ": True, "mean_daily": ":.1f", "CV": ":.2f", "annual_cost": False},
         color_discrete_map=color_map,
-        labels={"mean_daily": "Avg daily demand (units)", "CV": "Coefficient of variation (CV)"},
+        labels={"mean_daily": "Avg daily demand (units)", "CV": "Demand unpredictability (CV)"},
     )
 
     # XYZ threshold lines
