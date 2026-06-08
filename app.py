@@ -87,8 +87,8 @@ nav_items = [
     ("pages/1_📊_Forecast.py",  "📊", "Forecast",       "Daily demand · confidence intervals · anomaly alerts"),
     ("pages/2_🎛️_What_If.py", "🎛️", "What-If",         "Simulate promotions, holidays & oil prices"),
     ("pages/3_📋_Orders.py",    "📋", "Orders",          "AI-powered purchase order generator"),
-    ("pages/5_🔲_ABC_XYZ.py",  "🔲", "ABC-XYZ Matrix",  "Inventory risk & priority segmentation"),
-    ("pages/4_📤_Upload.py",    "📤", "Upload Data",     "Upload your own sales CSV"),
+    ("pages/4_🔲_ABC_XYZ.py",  "🔲", "ABC-XYZ Matrix",  "Inventory risk & priority segmentation"),
+    ("pages/5_📤_Upload.py",    "📤", "Upload Data",     "Upload your own sales CSV"),
 ]
 
 cols = st.columns(5)
