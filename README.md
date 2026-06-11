@@ -81,8 +81,8 @@ Ensemble improves **35.2%** over the naive baseline.
 │   ├── 1_📊_Forecast.py    Forecast + anomaly detection + SHAP + MAPE by family
 │   ├── 2_🎛️_What_If.py    Scenario simulator with multi-scenario comparison
 │   ├── 3_📋_Orders.py      Purchase order generator with stockout cost estimator
-│   ├── 4_📤_Upload.py      CSV upload & column mapping
-│   └── 5_🔲_ABC_XYZ.py    ABC-XYZ inventory risk matrix
+│   ├── 4_🔲_ABC_XYZ.py    ABC-XYZ inventory risk matrix
+│   └── 5_📤_Upload.py      CSV upload & column mapping
 ├── src/
 │   ├── data_loader.py      Cached data loading functions
 │   ├── model_inference.py  Forecast, MAPE, What-If inference
@@ -108,7 +108,7 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-> **Note:** `data/processed/train_features.parquet` is stored via Git LFS (173 MB).
+> **Note:** Model files and processed data are stored via Git LFS (~232 MB total).
 > Make sure you have [Git LFS](https://git-lfs.com) installed and run `git lfs pull` after cloning.
 
 ---
