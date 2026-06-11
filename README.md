@@ -9,10 +9,9 @@ app_file: app.py
 pinned: false
 ---
 
-# ForecastIQ — Store Sales Forecasting & Inventory Optimization
+# ForecastIQ: Store Sales Forecasting and Inventory Optimization
 
-Intelligent demand forecasting and inventory optimization system built for the *Demand Mining* university project.
-Uses a hybrid ML pipeline (LightGBM + Prophet + LSTM) on the Kaggle [Store Sales — Time Series Forecasting](https://www.kaggle.com/competitions/store-sales-time-series-forecasting) dataset.
+Demand forecasting and inventory optimization system built for the *Data Mining* university project, using a hybrid ML pipeline (LightGBM + Prophet + LSTM) on the Kaggle [Store Sales - Time Series Forecasting](https://www.kaggle.com/competitions/store-sales-time-series-forecasting) dataset.
 
 **Live demo:** [huggingface.co/spaces/ArslanV/predikcijaPotraznje](https://huggingface.co/spaces/ArslanV/predikcijaPotraznje)
 
@@ -26,7 +25,7 @@ Uses a hybrid ML pipeline (LightGBM + Prophet + LSTM) on the Kaggle [Store Sales
 | Anomaly detection | Detects unexpected demand spikes and drops (IQR + Isolation Forest) |
 | SHAP explanations | Feature-level explanations for each prediction |
 | Inventory optimization | EOQ + safety stock calculation with configurable lead time and service level |
-| What-If simulator | Scenario analysis — change promotions, oil price, or holidays and see the forecast impact |
+| What-If simulator | Scenario analysis: change promotions, oil price, or holidays and see the forecast impact |
 | Purchase orders | Auto-generated order quantities with stockout cost estimator, exportable as CSV, Excel, or PDF |
 | ABC-XYZ matrix | Inventory risk segmentation by value tier (ABC) and demand variability (XYZ) |
 | Data upload | Upload custom sales CSV and map columns to the system schema |
@@ -47,9 +46,9 @@ Raw data
   └── 08_inventory.ipynb         EOQ, safety stock, ABC classification
 ```
 
-### Model performance (validation: Aug 1–15, 2017)
+### Model performance (validation: Aug 1-15, 2017)
 
-Metric: **RMSLE** (Root Mean Squared Log Error) — lower is better.
+Metric: RMSLE (Root Mean Squared Log Error), lower is better.
 
 | Model | RMSLE |
 |---|---|
@@ -58,13 +57,13 @@ Metric: **RMSLE** (Root Mean Squared Log Error) — lower is better.
 | LightGBM + Prophet features | 0.3695 |
 | **Ensemble (α=0.90)** | **0.3689** |
 
-Ensemble improves **35.2%** over the naive baseline.
+The ensemble improves 35.2% over the naive baseline.
 
 ---
 
 ## Dataset
 
-**Store Sales — Time Series Forecasting** ([Kaggle](https://www.kaggle.com/competitions/store-sales-time-series-forecasting))
+Store Sales - Time Series Forecasting ([Kaggle](https://www.kaggle.com/competitions/store-sales-time-series-forecasting))
 
 - 54 stores across Ecuador
 - 33 product families
