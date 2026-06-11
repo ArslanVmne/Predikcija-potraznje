@@ -68,7 +68,7 @@ def make_forecast_chart(history: pd.DataFrame, forecast: pd.DataFrame, anomalies
             y=forecast["ci_upper"].tolist() + forecast["ci_lower"].tolist()[::-1],
             fill="toself", fillcolor="rgba(37,99,235,0.10)",
             line=dict(color="rgba(0,0,0,0)"),
-            name="Prediction band (±1.5×MAE)", showlegend=True,
+            name="Expected range", showlegend=True,
         ))
         fig.add_trace(go.Scatter(
             x=dates, y=forecast["yhat"],
@@ -212,7 +212,7 @@ k4.metric("Anomalies (90d)", n_anomalies, delta="Detected" if n_anomalies > 0 el
 st.divider()
 
 # Forecast chart
-st.subheader("Forecast with prediction band (±1.5×MAE)")
+st.subheader("Forecast with expected range")
 st.plotly_chart(make_forecast_chart(history, forecast, anomalies), use_container_width=True)
 
 # Anomaly table

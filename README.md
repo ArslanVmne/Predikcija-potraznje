@@ -21,7 +21,7 @@ Demand forecasting and inventory optimization system built for the *Data Mining*
 
 | Feature | Description |
 |---|---|
-| Demand forecast | Daily sales forecast with a ±1.5×MAE prediction band per store & product family |
+| Demand forecast | Daily sales forecast with expected range per store & product family |
 | Anomaly detection | Detects unexpected demand spikes and drops (IQR + Isolation Forest) |
 | SHAP explanations | Feature-level explanations for each prediction |
 | Inventory optimization | EOQ + safety stock calculation with configurable lead time and service level |
