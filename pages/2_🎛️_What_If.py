@@ -10,16 +10,6 @@ st.set_page_config(page_title="What-If — ForecastIQ", page_icon="🎛️", lay
 render_sidebar()
 
 
-@st.cache_data
-def cached_families():
-    return get_families()
-
-
-@st.cache_data
-def cached_stores():
-    return get_stores()
-
-
 SCENARIO_COLORS = ["#2563eb", "#16a34a", "#f59e0b"]
 
 
@@ -61,8 +51,8 @@ if "saved_scenarios" not in st.session_state:
     st.session_state["saved_scenarios"] = []
 
 # ── Controls (inside a form so sliders don't trigger reruns) ──────────────────
-families = cached_families()
-stores = cached_stores()
+families = get_families()
+stores = get_stores()
 
 col_ctrl, col_main = st.columns([1, 2.5])
 
@@ -112,12 +102,8 @@ with col_main:
 
     # Auto-run on first load with defaults
     if "whatif_result" not in st.session_state:
-        defaults = (
-            families.index("PRODUCE") if "PRODUCE" in families else 0,
-            stores[0],
-        )
-        default_family = families[defaults[0]]
-        default_store = defaults[1]
+        default_family = "PRODUCE" if "PRODUCE" in families else families[0]
+        default_store = stores[0]
         baseline_df = lgbm_predict_what_if(default_store, default_family)
         scenario_df = baseline_df.copy()
         st.session_state["whatif_result"] = (baseline_df, scenario_df)

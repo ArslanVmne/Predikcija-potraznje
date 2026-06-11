@@ -27,16 +27,6 @@ SHAP_LABELS = {
 
 
 @st.cache_data
-def cached_families():
-    return get_families()
-
-
-@st.cache_data
-def cached_stores():
-    return get_stores()
-
-
-@st.cache_data
 def cached_forecast(store: int, family: str) -> pd.DataFrame:
     return get_forecast(store, family)
 
@@ -123,8 +113,8 @@ def make_shap_chart(shap_data: list) -> go.Figure:
 
 
 # ── Sidebar controls ──────────────────────────────────────────────────────────
-families = cached_families()
-stores = cached_stores()
+families = get_families()
+stores = get_stores()
 
 with st.sidebar:
     st.divider()

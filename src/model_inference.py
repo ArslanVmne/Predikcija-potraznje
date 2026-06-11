@@ -2,7 +2,6 @@ import numpy as np
 import pandas as pd
 
 from src.data_loader import (
-    LGBM_FEATURES,
     load_lgbm,
     load_lgbm_features,
     load_train,

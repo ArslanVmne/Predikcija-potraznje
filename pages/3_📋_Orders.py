@@ -14,11 +14,6 @@ st.set_page_config(page_title="Orders — ForecastIQ", page_icon="📋", layout=
 render_sidebar()
 
 
-@st.cache_data
-def cached_stores():
-    return get_stores()
-
-
 # ── Sidebar controls ──────────────────────────────────────────────────────────
 with st.sidebar:
     st.divider()
@@ -26,7 +21,7 @@ with st.sidebar:
     lead_time = st.number_input("Lead time (days)", min_value=1, max_value=30, value=7)
     service_level = st.selectbox("Service level", [0.90, 0.95, 0.99],
                                  index=1, format_func=lambda x: f"{int(x*100)}%")
-    stores = cached_stores()
+    stores = get_stores()
     store_filter = st.selectbox("Store", ["All"] + [f"Store {s}" for s in stores])
     st.divider()
     st.markdown("**Filter lines**")
