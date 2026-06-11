@@ -7,7 +7,7 @@ import streamlit as st
 from src.data_loader import load_inventory_params
 from src.ui import HOVERLABEL, render_sidebar
 
-st.set_page_config(page_title="ABC-XYZ — ForecastIQ", page_icon="🔲", layout="wide")
+st.set_page_config(page_title="ABC-XYZ | ForecastIQ", page_icon="🔲", layout="wide")
 render_sidebar()
 
 CHART_LAYOUT = dict(
@@ -73,7 +73,7 @@ stable_high = int(counts.get("AX", 0))
 
 k1, k2, k3, k4 = st.columns(4)
 k1.metric("Total SKUs", len(df))
-k2.metric("AZ — Critical risk", critical, delta="Immediate action" if critical else "None", delta_color="inverse" if critical else "off")
+k2.metric("AZ: Critical risk", critical, delta="Immediate action" if critical else "None", delta_color="inverse" if critical else "off")
 k3.metric("High-value stable (AX)", stable_high)
 k4.metric("Z-class (unpredictable)", int((df["XYZ"] == "Z").sum()))
 
@@ -109,8 +109,8 @@ with col_matrix:
 
     fig_matrix = go.Figure(go.Heatmap(
         z=z_color,
-        x=["X — Stable", "Y — Variable", "Z — Unpredictable"],
-        y=["A — High value", "B — Med value", "C — Low value"],
+        x=["X: Stable", "Y: Variable", "Z: Unpredictable"],
+        y=["A: High value", "B: Med value", "C: Low value"],
         text=text_vals,
         customdata=hover_vals,
         texttemplate="%{text} SKUs",
@@ -133,7 +133,7 @@ with col_matrix:
     for cell, desc in [("AZ", CELL_DESC["AZ"]), ("AY", CELL_DESC["AY"]),
                        ("AX", CELL_DESC["AX"]), ("BZ", CELL_DESC["BZ"])]:
         color = CELL_COLOR[cell]
-        st.markdown(f"<span style='color:{color}'>■</span> **{cell}** — {desc}", unsafe_allow_html=True)
+        st.markdown(f"<span style='color:{color}'>■</span> **{cell}**: {desc}", unsafe_allow_html=True)
 
 # ── Scatter plot ───────────────────────────────────────────────────────────────
 with col_scatter:
@@ -181,7 +181,7 @@ st.subheader("Drill Down by Category")
 selected = st.selectbox(
     "Select ABC-XYZ class",
     options=["All"] + sorted(df["ABC_XYZ"].unique().tolist()),
-    format_func=lambda x: f"{x} — {CELL_DESC[x]}" if x != "All" else "All categories",
+    format_func=lambda x: f"{x}: {CELL_DESC[x]}" if x != "All" else "All categories",
 )
 
 filtered = df if selected == "All" else df[df["ABC_XYZ"] == selected]
@@ -203,11 +203,11 @@ st.dataframe(
         "Store": st.column_config.NumberColumn(
             help="Store number"),
         "ABC": st.column_config.TextColumn(
-            help="Value tier — A: top 80% of revenue, B: next 15%, C: bottom 5%"),
+            help="Value tier (A: top 80% of revenue, B: next 15%, C: bottom 5%)"),
         "XYZ": st.column_config.TextColumn(
-            help="Demand stability — X: stable (CV < 0.5), Y: variable (CV 0.5–1.0), Z: unpredictable (CV > 1.0)"),
+            help="Demand stability (X: stable if CV < 0.5, Y: variable if CV 0.5-1.0, Z: unpredictable if CV > 1.0)"),
         "Class": st.column_config.TextColumn(
-            help="Combined ABC-XYZ classification — e.g. AZ = high value + unpredictable demand"),
+            help="Combined ABC-XYZ classification, e.g. AZ = high value + unpredictable demand"),
         "Avg Daily Demand": st.column_config.NumberColumn(
             help="Average units sold per day across the dataset period"),
         "CV": st.column_config.NumberColumn(

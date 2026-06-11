@@ -6,7 +6,7 @@ from src.data_loader import get_families, get_stores
 from src.model_inference import lgbm_predict_what_if
 from src.ui import HOVERLABEL, render_sidebar
 
-st.set_page_config(page_title="What-If — ForecastIQ", page_icon="🎛️", layout="wide")
+st.set_page_config(page_title="What-If | ForecastIQ", page_icon="🎛️", layout="wide")
 render_sidebar()
 
 

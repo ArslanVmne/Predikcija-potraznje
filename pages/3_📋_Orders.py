@@ -10,7 +10,7 @@ from src.pdf_generator import generate_po_pdf
 from src.po_generator import generate_po_excel
 from src.ui import STATUS_EMOJI, render_sidebar
 
-st.set_page_config(page_title="Orders — ForecastIQ", page_icon="📋", layout="wide")
+st.set_page_config(page_title="Orders | ForecastIQ", page_icon="📋", layout="wide")
 render_sidebar()
 
 
@@ -31,7 +31,7 @@ with st.sidebar:
         default=["🔴 Critical", "🟡 Order Now", "🔵 Monitor", "🟢 OK"],
     )
     show_zero_qty = st.checkbox("Include zero-quantity lines", value=False,
-                                help="Lines where Order Qty = 0 mean stock is sufficient — hide them to keep the PO clean")
+                                help="Lines where Order Qty = 0 mean stock is sufficient; hide them to keep the PO clean")
 
 store_num = None if store_filter == "All" else int(store_filter.split()[-1])
 
@@ -98,7 +98,7 @@ st.markdown(f"""
                 PURCHASE ORDER
             </div>
             <div style="color:#94a3b8; font-size:0.9rem; margin-top:4px;">
-                ForecastIQ — Supply Chain Intelligence
+                ForecastIQ: Supply Chain Intelligence
             </div>
             <div style="color:#64748b; font-size:0.82rem; margin-top:10px;">
                 Corporación Favorita · Ecuador
@@ -138,7 +138,7 @@ k5.metric("Stockout exposure", f"${stockout_exposure:,.0f}",
 
 if stockout_items:
     _total = len(stockout_items)
-    _label = f"Stockout breakdown — {_total} critical item{'s' if _total != 1 else ''}" + (
+    _label = f"Stockout breakdown: {_total} critical item{'s' if _total != 1 else ''}" + (
         " (showing top 10)" if _total > 10 else ""
     )
     with st.expander(_label):
@@ -163,7 +163,7 @@ edited_df = st.data_editor(
         "Safety Stock":      st.column_config.NumberColumn(width="small",
                                  help=f"Minimum buffer = Z × σ × √lead_time at {int(service_level*100)}% SL"),
         "ROP":               st.column_config.NumberColumn(width="small",
-                                 help="Reorder Point — order when stock drops below this"),
+                                 help="Reorder Point: order when stock drops below this"),
         "Forecasted Demand": st.column_config.NumberColumn(width="small",
                                  help="Ensemble model prediction for the lead time window"),
         "Order Qty":         st.column_config.NumberColumn(width="small", min_value=0,

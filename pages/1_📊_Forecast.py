@@ -9,20 +9,20 @@ from src.inventory import get_critical_a_count
 from src.model_inference import get_forecast, get_history, get_mape
 from src.ui import HOVERLABEL, render_sidebar
 
-st.set_page_config(page_title="Forecast — ForecastIQ", page_icon="📊", layout="wide")
+st.set_page_config(page_title="Forecast | ForecastIQ", page_icon="📊", layout="wide")
 render_sidebar()
 
 SHAP_LABELS = {
-    "roll_mean_7":  "Sales trend — last 7 days",
+    "roll_mean_7":  "Sales trend, last 7 days",
     "onpromotion":  "Active promotion",
     "lag_7":        "Sales last week",
-    "roll_mean_14": "Sales trend — last 2 weeks",
+    "roll_mean_14": "Sales trend, last 2 weeks",
     "transactions": "Customer footfall",
     "lag_56":       "Sales 2 months ago",
     "prophet_trend": "Long-term category trend",
     "lag_14":       "Sales 2 weeks ago",
     "dayofmonth":   "Day of the month",
-    "roll_mean_28": "Sales trend — last month",
+    "roll_mean_28": "Sales trend, last month",
 }
 
 
@@ -192,8 +192,8 @@ if critical_count > 0:
         st.page_link("pages/3_📋_Orders.py", label="Go to Orders →", icon="📋")
 
 # ── Page ──────────────────────────────────────────────────────────────────────
-st.title(f"Sales Forecast — {family}")
-st.caption(f"Store {store}  ·  Forecast period: Aug 1–15, 2017  ·  AI ensemble model")
+st.title(f"Sales Forecast: {family}")
+st.caption(f"Store {store}  ·  Forecast period: Aug 1-15, 2017  ·  AI ensemble model")
 
 # KPIs
 n_anomalies = int(anomalies["is_anomaly"].sum())
@@ -217,7 +217,7 @@ st.plotly_chart(make_forecast_chart(history, forecast, anomalies), use_container
 
 # Anomaly table
 if n_anomalies > 0:
-    with st.expander(f"Detected anomalies — {n_anomalies} event(s) in last 90 days"):
+    with st.expander(f"Detected anomalies: {n_anomalies} event(s) in last 90 days"):
         anom_df = anomalies[anomalies["is_anomaly"]][["date", "sales", "direction", "zscore"]].copy()
         anom_df.columns = ["Date", "Sales", "Type", "Z-score"]
         anom_df["Type"] = anom_df["Type"].map({"spike": "Demand spike", "drop": "Demand drop"})
@@ -301,7 +301,7 @@ with st.expander("Forecast Accuracy by product family"):
     )
     st.plotly_chart(fig_mape, use_container_width=True)
     st.caption(
-        "🟢 < 15% · 🟡 15–30% · 🔴 > 30%  —  "
+        "🟢 < 15% · 🟡 15-30% · 🔴 > 30%.  "
         "High-volume staples (BOOKS, GROCERY I, PRODUCE) forecast accurately. "
         "Low-volume / irregular families (HARDWARE, LINGERIE) have higher error due to sparse demand."
     )

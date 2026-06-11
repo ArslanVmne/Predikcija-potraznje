@@ -39,7 +39,7 @@ with st.spinner("Loading live data..."):
 
 st.title("ForecastIQ")
 st.subheader("Demand Forecasting & Inventory Optimization System")
-st.caption("Built on the Favorita Grocery Sales dataset — 54 stores, 33 product families, 4 years of daily sales data")
+st.caption("Built on the Favorita Grocery Sales dataset: 54 stores, 33 product families, 4 years of daily sales data")
 
 st.divider()
 
@@ -59,10 +59,10 @@ with col1:
     st.markdown("### What this app does")
     st.markdown("""
 - **Forecasts daily demand** per product family and store using a multi-model AI system
-- **Detects demand anomalies** — automatically flags unexpected spikes or drops in sales
-- **Explains every prediction** in plain English — shows which factors are driving demand up or down
+- **Detects demand anomalies,** automatically flagging unexpected spikes or drops in sales
+- **Explains every prediction** in plain English, showing which factors are driving demand up or down
 - **Optimizes inventory** using industry-standard EOQ and safety stock formulas
-- **Simulates scenarios** — what happens if a promotion runs or oil prices change
+- **Simulates scenarios:** what happens if a promotion runs or oil prices change
 - **Generates purchase orders** based on forecast and configurable lead time / service level
     """)
 
@@ -101,7 +101,7 @@ st.divider()
 
 st.markdown("### Dataset")
 st.markdown("""
-[Store Sales — Time Series Forecasting](https://www.kaggle.com/competitions/store-sales-time-series-forecasting) — Kaggle competition dataset.
-3M+ daily sales records across 54 Ecuadorian grocery stores and 33 product categories (2013–2017).
+[Store Sales - Time Series Forecasting](https://www.kaggle.com/competitions/store-sales-time-series-forecasting), the Kaggle competition dataset.
+3M+ daily sales records across 54 Ecuadorian grocery stores and 33 product categories (2013-2017).
 External factors included: oil prices, public holidays, and promotional campaigns.
 """)

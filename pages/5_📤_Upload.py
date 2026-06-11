@@ -7,7 +7,7 @@ from src.data_loader import load_val_preds
 from src.model_inference import get_forecast, lgbm_predict_what_if
 from src.ui import HOVERLABEL, render_sidebar
 
-st.set_page_config(page_title="Upload — ForecastIQ", page_icon="📤", layout="wide")
+st.set_page_config(page_title="Upload | ForecastIQ", page_icon="📤", layout="wide")
 render_sidebar()
 
 REQUIRED_COLS = {"date", "store_nbr", "family", "sales", "onpromotion"}
@@ -112,7 +112,7 @@ if step == 1:
                 file_name="demo_sales.csv",
                 mime="text/csv",
                 use_container_width=True,
-                help="Jan–Jul 2017 · Stores 1, 3, 5 · 33 families · 20,988 rows",
+                help="Jan-Jul 2017 · Stores 1, 3, 5 · 33 families · 20,988 rows",
             )
 
         st.caption("Download → inspect → re-upload to see the full pipeline.")
@@ -126,7 +126,7 @@ elif step == 2:
     missing = REQUIRED_COLS - mapped_targets
 
     st.subheader("Column Mapping")
-    st.success(f"✓ **{meta['filename']}** — {len(df):,} rows, {len(df.columns)} columns")
+    st.success(f"✓ **{meta['filename']}**: {len(df):,} rows, {len(df.columns)} columns")
 
     # Detect if user uploaded the external factors file by mistake
     cols_lower = {c.lower() for c in df.columns}
@@ -218,7 +218,7 @@ elif step == 3:
     k1.metric("Rows", f"{n_rows:,}")
     k2.metric("Stores", n_stores)
     k3.metric("Families", n_families)
-    k4.metric("Date range", f"{date_min} – {date_max}")
+    k4.metric("Date range", f"{date_min} - {date_max}")
     k5.metric("Missing values", f"{missing_pct}%",
               delta="Clean" if missing_pct < 2 else "Check data",
               delta_color="off" if missing_pct < 2 else "inverse")
@@ -273,12 +273,12 @@ elif step == 3:
     if df["sales"].min() < 0:
         issues.append("Negative sales values detected")
     if n_families < 3:
-        issues.append("Very few product families — check family column")
+        issues.append("Very few product families; check family column")
 
     if issues:
         st.warning("**Validation warnings:**\n" + "\n".join(f"- {i}" for i in issues))
     else:
-        st.success("**Validation passed** — data looks clean and complete.")
+        st.success("**Validation passed**: data looks clean and complete.")
 
     c1, c2 = st.columns([1, 5])
     with c1:
@@ -312,11 +312,11 @@ elif step == 4:
     ][["store_nbr", "family"]].drop_duplicates()
     n_supported = len(supported)
 
-    st.success(f"**{meta['filename']}** — {len(df_mapped):,} rows loaded.")
+    st.success(f"**{meta['filename']}**: {len(df_mapped):,} rows loaded.")
     st.info(
         f"Your data covers **{date_max.strftime('%B %d, %Y')}**. "
         f"The pre-trained ensemble model will forecast the **next 15 days** "
-        f"(Aug 1–15, 2017) for **{n_supported} store/family combinations** "
+        f"(Aug 1-15, 2017) for **{n_supported} store/family combinations** "
         f"found in your upload."
     )
 
@@ -339,7 +339,7 @@ elif step == 4:
             fc_df = pd.DataFrame(rows)
 
         st.divider()
-        st.subheader("Forecast Results — Aug 1–15, 2017")
+        st.subheader("Forecast Results: Aug 1-15, 2017")
 
         # KPIs
         k1, k2, k3 = st.columns(3)
