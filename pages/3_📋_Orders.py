@@ -46,11 +46,11 @@ def get_orders(lead_time, service_level, store_num):
 orders = get_orders(lead_time, service_level, store_num)
 df_full = pd.DataFrame(orders)[
     ["product", "store", "abc", "current_stock", "safety_stock", "rop",
-     "ml_forecast", "suggested", "unit_price", "total", "status"]
+     "ml_forecast", "eoq", "suggested", "unit_price", "total", "status"]
 ]
 df_full.columns = [
     "Product", "Store", "ABC", "Current Stock", "Safety Stock", "ROP",
-    "Forecasted Demand", "Order Qty", "Unit Price ($)", "Total ($)", "Status"
+    "Forecasted Demand", "EOQ", "Order Qty", "Unit Price ($)", "Total ($)", "Status"
 ]
 
 df_full["Status"] = df_full["Status"].map(STATUS_EMOJI).fillna(df_full["Status"])
@@ -166,6 +166,8 @@ edited_df = st.data_editor(
                                  help="Reorder Point: order when stock drops below this"),
         "Forecasted Demand": st.column_config.NumberColumn(width="small",
                                  help="Ensemble model prediction for the lead time window"),
+        "EOQ":               st.column_config.NumberColumn(width="small",
+                                 help="Economic Order Quantity: theoretically optimal order size that minimizes annual ordering + holding costs. Calculated from historical demand. Compare with Order Qty (ML-based)."),
         "Order Qty":         st.column_config.NumberColumn(width="small", min_value=0,
                                  help="Forecasted Demand + Safety Stock − Current Stock. Edit to override."),
         "Unit Price ($)":    st.column_config.NumberColumn(format="$%.2f", width="small"),
@@ -173,7 +175,7 @@ edited_df = st.data_editor(
         "Status":            st.column_config.TextColumn(width="small"),
     },
     disabled=["Product", "Store", "ABC", "Current Stock", "Safety Stock", "ROP",
-              "Forecasted Demand", "Unit Price ($)", "Total ($)", "Status"],
+              "Forecasted Demand", "EOQ", "Unit Price ($)", "Total ($)", "Status"],
 )
 
 # Recalculate totals when Order Qty is edited
