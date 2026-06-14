@@ -4,7 +4,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from src.anomaly import detect_anomalies
-from src.data_loader import get_families, get_stores, load_inventory_params, load_shap_by_family, load_val_preds
+from src.data_loader import get_families, get_store_labels, get_stores, load_inventory_params, load_shap_by_family, load_val_preds
 from src.inventory import get_critical_a_count
 from src.model_inference import get_forecast, get_history, get_mape
 from src.ui import HOVERLABEL, render_sidebar
@@ -115,6 +115,7 @@ def make_shap_chart(shap_data: list) -> go.Figure:
 # ── Sidebar controls ──────────────────────────────────────────────────────────
 families = get_families()
 stores = get_stores()
+store_labels = get_store_labels()
 
 with st.sidebar:
     st.divider()
@@ -129,6 +130,7 @@ with st.sidebar:
     else:
         store_options = stores
     store = st.selectbox("Store", store_options, index=0,
+                         format_func=lambda s: store_labels.get(s, f"Store {s}"),
                          help="Select a store location to view its specific forecast and historical sales patterns.")
 
 # ── Load data ─────────────────────────────────────────────────────────────────

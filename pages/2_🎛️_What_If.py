@@ -2,7 +2,7 @@ import numpy as np
 import plotly.graph_objects as go
 import streamlit as st
 
-from src.data_loader import get_families, get_stores
+from src.data_loader import get_families, get_store_labels, get_stores
 from src.model_inference import lgbm_predict_what_if
 from src.ui import HOVERLABEL, render_sidebar
 
@@ -53,6 +53,7 @@ if "saved_scenarios" not in st.session_state:
 # ── Controls (inside a form so sliders don't trigger reruns) ──────────────────
 families = get_families()
 stores = get_stores()
+store_labels = get_store_labels()
 
 col_ctrl, col_main = st.columns([1, 2.5])
 
@@ -64,6 +65,7 @@ with col_ctrl:
                               index=families.index("PRODUCE") if "PRODUCE" in families else 0,
                               help="Select a product category to simulate promotion impact and compare revenue scenarios.")
         store = st.selectbox("Store", stores, index=0,
+                             format_func=lambda s: store_labels.get(s, f"Store {s}"),
                              help="Select a store location for the simulation.")
 
         st.markdown("**Marketing campaign**")

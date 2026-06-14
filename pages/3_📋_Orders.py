@@ -4,7 +4,7 @@ from datetime import date, timedelta
 import pandas as pd
 import streamlit as st
 
-from src.data_loader import get_stores
+from src.data_loader import get_store_labels, get_stores
 from src.inventory import build_orders
 from src.pdf_generator import generate_po_pdf
 from src.po_generator import generate_po_excel
@@ -24,7 +24,9 @@ with st.sidebar:
                                  index=1, format_func=lambda x: f"{int(x*100)}%",
                                  help="Target fill rate. 90% = acceptable stockout risk, 95% = standard retail, 99% = minimal risk but significantly more safety stock required.")
     stores = get_stores()
+    store_labels = get_store_labels()
     store_filter = st.selectbox("Store", ["All"] + [f"Store {s}" for s in stores],
+                                format_func=lambda x: "All Stores" if x == "All" else store_labels.get(int(x.split()[-1]), x),
                                 help="Filter the purchase order to a specific store or generate a consolidated order across all stores.")
     st.divider()
     st.markdown("**Filter lines**")

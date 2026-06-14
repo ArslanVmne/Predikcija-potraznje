@@ -77,6 +77,13 @@ def get_stores() -> list[int]:
     return sorted(load_train()["store_nbr"].unique().tolist())
 
 
+@lru_cache(maxsize=1)
+def get_store_labels() -> dict[int, str]:
+    stores_csv = BASE / "data" / "raw" / "stores.csv"
+    df = pd.read_csv(stores_csv, usecols=["store_nbr", "city"])
+    return {int(row.store_nbr): f"Store {int(row.store_nbr)} — {row.city}" for row in df.itertuples()}
+
+
 LGBM_FEATURES = [
     "store_nbr", "family_enc", "type_enc", "city_enc", "state_enc", "cluster",
     "onpromotion", "transactions", "oil_price",
