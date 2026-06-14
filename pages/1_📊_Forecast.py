@@ -119,7 +119,8 @@ stores = get_stores()
 with st.sidebar:
     st.divider()
     family = st.selectbox("Product family", families,
-                          index=families.index("PRODUCE") if "PRODUCE" in families else 0)
+                          index=families.index("PRODUCE") if "PRODUCE" in families else 0,
+                          help="Select a product category to view its demand forecast, anomalies, and store breakdown.")
 
     uploaded_stores = st.session_state.get("uploaded_stores", [])
     if uploaded_stores:
@@ -127,7 +128,8 @@ with st.sidebar:
         st.caption(f"Showing uploaded stores: {uploaded_stores}")
     else:
         store_options = stores
-    store = st.selectbox("Store", store_options, index=0)
+    store = st.selectbox("Store", store_options, index=0,
+                         help="Select a store location to view its specific forecast and historical sales patterns.")
 
 # ── Load data ─────────────────────────────────────────────────────────────────
 history = cached_history(store, family)
@@ -199,15 +201,18 @@ st.caption(f"Store {store}  ·  Forecast period: Aug 1-15, 2017  ·  AI ensemble
 n_anomalies = int(anomalies["is_anomaly"].sum())
 
 k1, k2, k3, k4 = st.columns(4)
-k1.metric("15-day Forecast", f"{forecast_total:,} units")
+k1.metric("15-day Forecast", f"{forecast_total:,} units",
+          help="Total units forecasted for Aug 1-15, 2017 for the selected store and product family, using the LightGBM + LSTM ensemble model.")
 k2.metric("Forecast accuracy", f"{mape}% avg error",
           delta=f"{'Excellent' if mape < 10 else 'Acceptable'}",
           delta_color="off",
           help="Average % error vs. actual sales. Under 15% is excellent for retail demand forecasting.")
 k3.metric("Trend vs prior period", f"{'+' if trend_pct >= 0 else ''}{trend_pct}%",
-          delta_color="normal" if trend_pct >= 0 else "inverse")
+          delta_color="normal" if trend_pct >= 0 else "inverse",
+          help="Percentage change comparing the 15-day forecast against actual sales from the equivalent prior period. Positive means demand is growing.")
 k4.metric("Anomalies (90d)", n_anomalies, delta="Detected" if n_anomalies > 0 else "None",
-          delta_color="inverse" if n_anomalies > 0 else "off")
+          delta_color="inverse" if n_anomalies > 0 else "off",
+          help="Unusual demand spikes or drops detected in the last 90 days using IQR + Isolation Forest. A value is flagged when it falls outside 2.5 times the interquartile range.")
 
 st.divider()
 

@@ -215,13 +215,18 @@ elif step == 3:
 
     # KPIs
     k1, k2, k3, k4, k5 = st.columns(5)
-    k1.metric("Rows", f"{n_rows:,}")
-    k2.metric("Stores", n_stores)
-    k3.metric("Families", n_families)
-    k4.metric("Date range", f"{date_min} - {date_max}")
+    k1.metric("Rows", f"{n_rows:,}",
+              help="Total number of records in your uploaded file.")
+    k2.metric("Stores", n_stores,
+              help="Number of unique store locations detected in your dataset.")
+    k3.metric("Families", n_families,
+              help="Number of unique product categories detected in your dataset.")
+    k4.metric("Date range", f"{date_min} - {date_max}",
+              help="Time span of your sales data. Longer periods (90+ days) improve forecast accuracy.")
     k5.metric("Missing values", f"{missing_pct}%",
               delta="Clean" if missing_pct < 2 else "Check data",
-              delta_color="off" if missing_pct < 2 else "inverse")
+              delta_color="off" if missing_pct < 2 else "inverse",
+              help="Percentage of null or empty cells. Under 2% is clean; 5% or more may affect forecast quality.")
 
     st.divider()
 
@@ -343,9 +348,12 @@ elif step == 4:
 
         # KPIs
         k1, k2, k3 = st.columns(3)
-        k1.metric("Store/product combinations", len(fc_df))
-        k2.metric("Total forecasted demand", f"{int(fc_df['forecast_15d'].sum()):,} units")
-        k3.metric("Avg per combination", f"{int(fc_df['forecast_15d'].mean()):,} units")
+        k1.metric("Store/product combinations", len(fc_df),
+                  help="Number of store-product pairs from your upload that exist in the model's training set. Only these can be forecasted.")
+        k2.metric("Total forecasted demand", f"{int(fc_df['forecast_15d'].sum()):,} units",
+                  help="Sum of all 15-day forecasts (Aug 1-15, 2017) across all supported store-product combinations from your upload.")
+        k3.metric("Avg per combination", f"{int(fc_df['forecast_15d'].mean()):,} units",
+                  help="Average 15-day forecast per single store-product combination.")
 
         col_left, col_right = st.columns(2)
 

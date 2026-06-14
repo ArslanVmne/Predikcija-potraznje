@@ -72,10 +72,14 @@ high_risk = int(counts.get("AZ", 0) + counts.get("BZ", 0))
 stable_high = int(counts.get("AX", 0))
 
 k1, k2, k3, k4 = st.columns(4)
-k1.metric("Total SKUs", len(df))
-k2.metric("AZ: Critical risk", critical, delta="Immediate action" if critical else "None", delta_color="inverse" if critical else "off")
-k3.metric("High-value stable (AX)", stable_high)
-k4.metric("Z-class (unpredictable)", int((df["XYZ"] == "Z").sum()))
+k1.metric("Total SKUs", len(df),
+          help="Total number of unique product-store combinations in the inventory portfolio.")
+k2.metric("AZ: Critical risk", critical, delta="Immediate action" if critical else "None", delta_color="inverse" if critical else "off",
+          help="High-value products (A: top 80% of revenue) with unpredictable demand (Z: CV > 1.0). Highest risk category. Require higher safety stock and frequent monitoring.")
+k3.metric("High-value stable (AX)", stable_high,
+          help="High-value products (A-class) with stable, predictable demand (X: CV < 0.5). Best candidates for replenishment cycle optimization and lower safety stock.")
+k4.metric("Z-class (unpredictable)", int((df["XYZ"] == "Z").sum()),
+          help="Products with highly erratic demand (CV > 1.0). Coefficient of Variation (CV) = standard deviation / mean. High CV means demand varies a lot relative to its average.")
 
 st.divider()
 
@@ -182,6 +186,7 @@ selected = st.selectbox(
     "Select ABC-XYZ class",
     options=["All"] + sorted(df["ABC_XYZ"].unique().tolist()),
     format_func=lambda x: f"{x}: {CELL_DESC[x]}" if x != "All" else "All categories",
+    help="Filter the product table to a specific ABC-XYZ category. AZ = highest priority (high value, unpredictable demand). AX = optimization opportunity (high value, stable demand).",
 )
 
 filtered = df if selected == "All" else df[df["ABC_XYZ"] == selected]

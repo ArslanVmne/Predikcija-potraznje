@@ -18,11 +18,14 @@ render_sidebar()
 with st.sidebar:
     st.divider()
     st.markdown("**Order parameters**")
-    lead_time = st.number_input("Lead time (days)", min_value=1, max_value=30, value=7)
+    lead_time = st.number_input("Lead time (days)", min_value=1, max_value=30, value=7,
+                                help="Days between placing an order and receiving goods. Affects Reorder Point (ROP) and Safety Stock calculations. Typical retail: 7-14 days.")
     service_level = st.selectbox("Service level", [0.90, 0.95, 0.99],
-                                 index=1, format_func=lambda x: f"{int(x*100)}%")
+                                 index=1, format_func=lambda x: f"{int(x*100)}%",
+                                 help="Target fill rate. 90% = acceptable stockout risk, 95% = standard retail, 99% = minimal risk but significantly more safety stock required.")
     stores = get_stores()
-    store_filter = st.selectbox("Store", ["All"] + [f"Store {s}" for s in stores])
+    store_filter = st.selectbox("Store", ["All"] + [f"Store {s}" for s in stores],
+                                help="Filter the purchase order to a specific store or generate a consolidated order across all stores.")
     st.divider()
     st.markdown("**Filter lines**")
     status_filter = st.multiselect(
@@ -126,11 +129,15 @@ st.markdown(f"""
 k1, k2, k3, k4, k5 = st.columns(5)
 critical_count = int((df_full["Status"] == "🔴 Critical").sum())
 order_now_count = int((df_full["Status"] == "🟡 Order Now").sum())
-k1.metric("Total Lines", len(df_full))
-k2.metric("Total Value", f"${total_value:,.0f}")
+k1.metric("Total Lines", len(df_full),
+          help="Number of product lines in the purchase order after applying current filters.")
+k2.metric("Total Value", f"${total_value:,.0f}",
+          help="Total order value: sum of Order Qty × Unit Price across all lines.")
 k3.metric("Critical items", critical_count,
-          delta="Immediate action" if critical_count else None, delta_color="inverse")
-k4.metric("Delivery Date", delivery_date.strftime("%b %d"))
+          delta="Immediate action" if critical_count else None, delta_color="inverse",
+          help="A-class products (top 80% of revenue) currently below safety stock. Stock must be replenished immediately to avoid stockouts.")
+k4.metric("Delivery Date", delivery_date.strftime("%b %d"),
+          help=f"Expected delivery date: today + {lead_time}-day lead time.")
 k5.metric("Stockout exposure", f"${stockout_exposure:,.0f}",
           delta="Cost of not ordering" if stockout_exposure > 0 else "No exposure",
           delta_color="inverse" if stockout_exposure > 0 else "off",
@@ -170,9 +177,12 @@ edited_df = st.data_editor(
                                  help="Economic Order Quantity: theoretically optimal order size that minimizes annual ordering + holding costs. Calculated from historical demand. Compare with Order Qty (ML-based)."),
         "Order Qty":         st.column_config.NumberColumn(width="small", min_value=0,
                                  help="Forecasted Demand + Safety Stock − Current Stock. Edit to override."),
-        "Unit Price ($)":    st.column_config.NumberColumn(format="$%.2f", width="small"),
-        "Total ($)":         st.column_config.NumberColumn(format="$%.2f", width="small"),
-        "Status":            st.column_config.TextColumn(width="small"),
+        "Unit Price ($)":    st.column_config.NumberColumn(format="$%.2f", width="small",
+                                 help="Estimated unit cost derived from annual inventory cost divided by annual demand."),
+        "Total ($)":         st.column_config.NumberColumn(format="$%.2f", width="small",
+                                 help="Line total: Order Qty × Unit Price. Updates automatically when Order Qty is edited."),
+        "Status":            st.column_config.TextColumn(width="small",
+                                 help="🔴 Critical: stock below safety stock. 🟡 Order Now: stock below ROP. 🔵 Monitor: A-class product above ROP. 🟢 OK: sufficient stock."),
     },
     disabled=["Product", "Store", "ABC", "Current Stock", "Safety Stock", "ROP",
               "Forecasted Demand", "EOQ", "Unit Price ($)", "Total ($)", "Status"],
