@@ -79,8 +79,7 @@ def get_stores() -> list[int]:
 
 @lru_cache(maxsize=1)
 def get_store_labels() -> dict[int, str]:
-    stores_csv = BASE / "data" / "raw" / "stores.csv"
-    df = pd.read_csv(stores_csv, usecols=["store_nbr", "city"])
+    df = pd.read_parquet(DATA / "stores.parquet")
     return {int(row.store_nbr): f"Store {int(row.store_nbr)} — {row.city}" for row in df.itertuples()}
 
 
